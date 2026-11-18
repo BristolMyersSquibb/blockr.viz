@@ -34,9 +34,10 @@ CB_VALUE_CALLS <- c("c", "factor", "as.Date", "as.POSIXct")
 #' @noRd
 # `on`: the word a flag prints while on (its label otherwise). `when`: the name
 # of a flag declared above; while that flag is off the control is off (not
-# drawn, an empty word, not offered).
+# drawn, an empty word, not offered). `labels` and `notes`: what each choice
+# of a select shows, and a muted note beside it in the menu ("12 patients").
 CB_ANN_KEYS <- c("label", "min", "max", "step", "placeholder", "on", "when",
-                 "multiple", "labels")
+                 "multiple", "labels", "notes")
 
 #' Call names accepted as an annotation wrapper (`#| number(min = 1)`)
 #' @noRd
@@ -199,13 +200,16 @@ cb_annotation <- function(line_text) {
   if (!length(args)) {
     return(list())
   }
-  # `labels` may read the script's own values (`labels = names(fields)`):
-  # kept as an expression, evaluated where the declaration is (cb_specs()).
-  lab <- args["labels"]
-  out <- lapply(args[names(args) != "labels"], function(a) {
+  # `labels` and `notes` may read the script's own values (`labels =
+  # names(fields)`): kept as expressions, evaluated where the declaration is
+  # (cb_specs()).
+  lazy <- c("labels", "notes")
+  out <- lapply(args[!names(args) %in% lazy], function(a) {
     tryCatch(eval(a, baseenv()), error = function(e) NULL)
   })
-  if (!is.null(lab[[1L]])) out$labels <- lab[[1L]]
+  for (k in intersect(lazy, names(args))) {
+    if (!is.null(args[[k]])) out[[k]] <- args[[k]]
+  }
   out
 }
 
@@ -362,8 +366,10 @@ cb_decl_spec <- function(st, parsed, env, values) {
       error = NULL
     ),
     ann[setdiff(names(ann), c("name", "line", "kind", "choices", "multiple",
-                              "default", "error", "off", "labels"))],
-    list(off = cb_switched_off(ann$when, env), labels = w$labels)
+                              "default", "error", "off", "labels",
+                              "notes"))],
+    list(off = cb_switched_off(ann$when, env), labels = w$labels,
+         notes = w$notes)
   )
 }
 
@@ -510,12 +516,16 @@ cb_coerce <- function(value, spec) {
   )
 }
 
-# A select's `#| select(labels = ...)`: what each choice shows, one per
-# choice, evaluated where the declaration is (it may read the script's own
-# values). Labels that fail or miscount are left out.
+# A select's `#| select(labels = ..., notes = ...)`: what each choice shows,
+# and the note beside it in the menu, one per choice, evaluated where the
+# declaration is (they may read the script's own values). Ones that fail or
+# miscount are left out.
 cb_select_labels <- function(w, ann, env) {
-  if (!identical(w$kind, "select") || is.null(ann$labels)) return(w)
-  lab <- tryCatch(as.character(eval(ann$labels, env)), error = function(e) NULL)
-  if (length(lab) == length(w$choices)) w$labels <- unname(lab)
+  if (!identical(w$kind, "select")) return(w)
+  for (k in c("labels", "notes")) {
+    if (is.null(ann[[k]])) next
+    v <- tryCatch(as.character(eval(ann[[k]], env)), error = function(e) NULL)
+    if (length(v) == length(w$choices)) w[[k]] <- unname(v)
+  }
   w
 }

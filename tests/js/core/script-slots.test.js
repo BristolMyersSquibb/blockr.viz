@@ -251,3 +251,32 @@ test('a choice word bolds the pick when reopened after R echoed it', { skip: !ha
   assert.deepEqual(bold(), ['Patients']);
   f.slots.dispose();
 });
+
+test('a multi word with notes lists each label with its note and writes the stored value',
+  { skip: !hasUi() }, async () => {
+    const terms = { name: 'ae_terms', key: 'sv_ae_terms', label: 'Showing', kind: 'multi',
+                    options: ['Preferred term: Rash', 'Preferred term: Nausea'],
+                    labels: ['Rash', 'Nausea'], notes: ['27 patients', '1 patient'] };
+    const script = Object.assign({}, SCRIPT, { inputs: SCRIPT.inputs.concat([terms]),
+                                               values: Object.assign({}, SCRIPT.values, { sv_ae_terms: [] }) });
+    const band = { parts: [{ text: 'AEs by Preferred term, showing ' }, { text: 'all', arg: 'ae_terms' }] };
+    const env = loadGear({ ui: true });
+    const m = mountGear(env);
+    m.gear.update(payload(CONFIG, { derived: { titles: { subtitle: band }, script } }));
+    const t = Object.assign(env, m);
+    assert.deepEqual(plain(t.gear.slot('ae_terms').options[0]),
+                     { value: 'Preferred term: Rash', label: 'Rash', note: '27 patients' });
+    const f = face(t, band);
+    f.words()[0].click();
+    const opts = Array.from(t.doc.querySelectorAll('.blockr-select__option'));
+    const rash = opts.find((o) => o.textContent.includes('Rash'));
+    assert.ok(rash, 'the menu names the term by its label');
+    assert.ok(!rash.textContent.includes('Preferred term:'), 'not by the stored value');
+    assert.ok(rash.textContent.includes('27 patients'), 'with its note beside it');
+    rash.click();
+    // A multi applies its picks when the menu closes.
+    f.slots.close();
+    await tick(t.win);
+    assert.deepEqual(plain(lastSet(t).values.script_values.ae_terms), ['Preferred term: Rash']);
+    f.slots.dispose();
+  });

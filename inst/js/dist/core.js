@@ -1,4 +1,4 @@
-// blockr.viz bundle d2423645ab79d6572553ea4b0a413bc3, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 28263d7326db97c08227151b1e84bebc, built by tools/bundle.js. Do not edit.
 // sources: core/namespace.js core/util.js core/lazy.js core/tooltip.js core/scope.js core/busy.js core/binding.js core/download.js core/capture.js core/titles.js core/title-words.js core/ticks.js core/slot-pair.js core/gear/tray-nav.js core/gear/sections.js core/gear/tiles.js core/gear/icons.js core/gear/controls.js core/gear/range.js core/gear/ticks.js core/gear/profile.js core/gear/tray.js core/gear/counts.js core/gear/focus.js core/gear/engine.js core/frame.js core/data-view.js core/script-band.js spec/chart.js spec/table.js
 // --- core/namespace.js
 // @ts-check
@@ -2795,15 +2795,16 @@
   // -- widgets ----------------------------------------------------------------
 
   /** Choices as Blockr.Select options. Select prints an object as its value
-   * with its label muted, which suits a column (name, variable label); a
-   * fixed option goes in as its label alone. `keys[i]` is the string that
-   * stands for choice i.
+   * with its label muted, so a choice with a note goes in as its label and
+   * the note (a column's name and variable label, a term and its patient
+   * count); a fixed option goes in as its label alone. `keys[i]` is the
+   * string that stands for choice i.
    * @param {VizChoice[]} choices */
   function uiOptions(choices) {
     /** @type {string[]} */
     const keys = [];
     const options = choices.map((c) => {
-      let k = c.note != null ? String(c.value ?? c.label) : c.label;
+      let k = c.note != null ? String(c.label ?? c.value) : c.label;
       while (keys.includes(k)) k += ' ';
       keys.push(k);
       return c.note ? { value: k, label: c.note } : k;
@@ -4423,8 +4424,12 @@
         }
         case 'select':
         case 'multi': {
-          const options = /** @type {string[]} */ (sp.options || [])
-            .map((o, i) => ({ value: String(o), label: String((sp.labels || [])[i] ?? o) }));
+          // A note beside an option ("12 patients") shows muted in the menu.
+          const options = /** @type {string[]} */ (sp.options || []).map((o, i) => {
+            const note = (sp.notes || [])[i];
+            return { value: String(o), label: String((sp.labels || [])[i] ?? o),
+                     ...(note != null ? { note: String(note) } : {}) };
+          });
           if (!options.length) return null;
           return { kind: 'menu', options, selected: value ?? null, multi: sp.kind === 'multi',
                    set, label };

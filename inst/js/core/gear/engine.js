@@ -530,8 +530,12 @@
         }
         case 'select':
         case 'multi': {
-          const options = /** @type {string[]} */ (sp.options || [])
-            .map((o, i) => ({ value: String(o), label: String((sp.labels || [])[i] ?? o) }));
+          // A note beside an option ("12 patients") shows muted in the menu.
+          const options = /** @type {string[]} */ (sp.options || []).map((o, i) => {
+            const note = (sp.notes || [])[i];
+            return { value: String(o), label: String((sp.labels || [])[i] ?? o),
+                     ...(note != null ? { note: String(note) } : {}) };
+          });
           if (!options.length) return null;
           return { kind: 'menu', options, selected: value ?? null, multi: sp.kind === 'multi',
                    set, label };

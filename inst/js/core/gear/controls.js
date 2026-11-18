@@ -200,15 +200,16 @@
   // -- widgets ----------------------------------------------------------------
 
   /** Choices as Blockr.Select options. Select prints an object as its value
-   * with its label muted, which suits a column (name, variable label); a
-   * fixed option goes in as its label alone. `keys[i]` is the string that
-   * stands for choice i.
+   * with its label muted, so a choice with a note goes in as its label and
+   * the note (a column's name and variable label, a term and its patient
+   * count); a fixed option goes in as its label alone. `keys[i]` is the
+   * string that stands for choice i.
    * @param {VizChoice[]} choices */
   function uiOptions(choices) {
     /** @type {string[]} */
     const keys = [];
     const options = choices.map((c) => {
-      let k = c.note != null ? String(c.value ?? c.label) : c.label;
+      let k = c.note != null ? String(c.label ?? c.value) : c.label;
       while (keys.includes(k)) k += ' ';
       keys.push(k);
       return c.note ? { value: k, label: c.note } : k;

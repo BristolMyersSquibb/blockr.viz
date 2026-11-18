@@ -41,6 +41,8 @@ script_control_records <- function(specs) {
       rec$options <- as.list(as.character(s$choices))
       # What each option shows, when the declaration names its levels.
       if (length(s$labels)) rec$labels <- as.list(as.character(s$labels))
+      # A muted note beside each option in the menu ("12 patients").
+      if (length(s$notes)) rec$notes <- as.list(as.character(s$notes))
     }
     if (identical(s$kind, "flag")) {
       rec$options <- list(list(value = "on", label = label),
@@ -168,13 +170,15 @@ script_title_args <- function(roles, specs, values = list()) {
       v <- as.character(s$placeholder %||% "")
     }
     # A multi-select prints its picks: "all" when every choice is picked,
-    # "none" when none is, the picks in a list otherwise. Picks its pool no
-    # longer offers (the pool can follow another control) do not count.
+    # its placeholder (else "none") when none is, the picks in a list
+    # otherwise. Picks its pool no longer offers (the pool can follow
+    # another control) do not count.
     if (identical(s$kind, "select") && isTRUE(s$multiple)) {
       picks <- as.character(v)
       pool <- as.character(s$choices)
       if (length(pool)) picks <- picks[picks %in% pool]
-      v <- script_picks_word(script_labelled(picks, s), pool)
+      v <- script_picks_word(script_labelled(picks, s), pool,
+                             s$placeholder)
     } else if (identical(s$kind, "select")) {
       v <- script_labelled(as.character(v), s)
     }
@@ -187,15 +191,22 @@ script_title_args <- function(roles, specs, values = list()) {
   out
 }
 
-# The word for a multi-select's picks.
-script_picks_word <- function(v, choices) {
-  if (!length(v)) return("none")
+# The word for a multi-select's picks: the first three, then how many more
+# ("Rash, Nausea, Fatigue +2 more").
+script_picks_word <- function(v, choices, empty = NULL) {
+  if (!length(v)) {
+    return(if (length(empty) && nzchar(empty[[1L]])) empty[[1L]] else "none")
+  }
   if (length(choices) > 1L && setequal(v, choices)) return("all")
-  if (length(v) > TITLE_MAX_VALUES) {
-    v <- c(v[seq_len(TITLE_MAX_VALUES)], "\u2026")
+  if (length(v) > SCRIPT_PICKS_SHOWN) {
+    return(paste0(paste(v[seq_len(SCRIPT_PICKS_SHOWN)], collapse = ", "),
+                  " +", length(v) - SCRIPT_PICKS_SHOWN, " more"))
   }
   paste(v, collapse = ", ")
 }
+
+# How many picks a multi-select's word names before "+N more".
+SCRIPT_PICKS_SHOWN <- 3L
 
 # A select's values as its options show them: their labels when the
 # declaration names its levels, else as they are.

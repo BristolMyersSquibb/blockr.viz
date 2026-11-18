@@ -43,3 +43,32 @@ test_that("labels of the wrong length, or that fail, are left out", {
     expect_identical(script_title_args(list(), specs)$f, "AESEV")
   }
 })
+
+test_that("a multi-select's notes, placeholder and long picks", {
+  script <- paste(
+    paste0("terms <- paste(\"PT:\", c(\"Rash\", \"Nausea\", \"Fatigue\", ",
+           "\"Cough\", \"Fall\"))"),
+    paste0("ae_terms <- factor(character(), levels = terms)  #| select(",
+           "label = \"Showing\", multiple = TRUE, ",
+           "labels = sub(\"PT: \", \"\", terms), ",
+           "notes = paste(5:1, \"patients\"), placeholder = \"all\")"),
+    "data",
+    sep = "\n"
+  )
+  specs <- cb_specs(cb_parse(script), data.frame(x = 1))
+  expect_identical(specs[[1]]$notes, paste(5:1, "patients"))
+  rec <- script_control_records(specs)[[1]]
+  expect_identical(unlist(rec$notes), paste(5:1, "patients"))
+  # No pick reads as the placeholder, not "none".
+  expect_identical(script_title_args(list(), specs)$ae_terms, "all")
+  # The picks by their labels, three, then how many more.
+  set <- viz_script_values(
+    list(ae_terms = c("PT: Rash", "PT: Nausea", "PT: Fatigue", "PT: Cough")),
+    specs
+  )
+  expect_identical(script_title_args(list(), specs, set)$ae_terms,
+                   "Rash, Nausea, Fatigue +1 more")
+  # Notes of the wrong length are left out.
+  bad <- sub("5:1", "1:2", script, fixed = TRUE)
+  expect_null(cb_specs(cb_parse(bad), data.frame(x = 1))[[1]]$notes)
+})

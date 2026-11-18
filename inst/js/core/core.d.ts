@@ -144,6 +144,8 @@ interface VizScriptControl {
   options?: string[] | VizScriptOption[];
   /** What a select's options show, one per option, when the script names its levels. */
   labels?: string[];
+  /** A muted note beside each option in the menu, one per option. */
+  notes?: string[];
   /** From the declaration's annotation; a number, or a date for a date control. */
   min?: number | string;
   max?: number | string;
