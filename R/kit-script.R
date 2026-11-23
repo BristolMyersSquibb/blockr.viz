@@ -32,49 +32,17 @@
 #'     the gear's vocabulary and the error.
 #' @noRd
 viz_script_sources <- function(raw, state) {
-  has_script <- function() {
-    s <- state$script()
-    !is.null(s) && nzchar(trimws(paste(s, collapse = "\n")))
-  }
+  has_script <- function() viz_has_script(state)
   parsed <- shiny::reactive(cb_parse(state$script()))
-  # The script's control values, and for each `#| setting` line the block's
-  # own setting of that name: the script reads the block's current grouping
-  # (`by <- c("AEBODSYS", "AEDECOD")  #| setting`), and the block's code
-  # carries it as a literal.
-  # The script's values with the block's settings for its `#| setting`
-  # lines; `v`, script values, defaults to the block's.
   with_settings <- function(v = state$script_values() %||% list()) {
-    for (nm in cb_setting_names(parsed())) {
-      rv <- state[[nm]]
-      if (is.function(rv)) {
-        v[nm] <- list(rv())
-      } else if (is.function(state$summaries)) {
-        # A field of the first summary (`facet`, `fill`, `col`), as the
-        # groups table's words of those names read it.
-        s1 <- state$summaries()
-        s1 <- if (is.list(s1) && length(s1) && is.list(s1[[1L]])) s1[[1L]]
-        f <- if (identical(nm, "value")) "col" else nm
-        if (!is.null(s1[[f]])) v[nm] <- list(s1[[f]])
-      }
-    }
-    v
+    viz_script_with_settings(state, parsed(), v)
   }
   values <- shiny::reactive(with_settings())
   # The frame is kept for the block's expression (R/prepare-once.R).
   once <- prep_once()
   last <- new.env(parent = emptyenv())
   last$specs <- list()
-  # The declarations evaluated with the values `v`, kept for the next call
-  # with the same script, data and values: settle() evaluates them for the
-  # values it sets, which specs() then reads back.
-  eval_specs <- function(p, d, v) {
-    key <- list(p, d, v)
-    if (!identical(key, last$key)) {
-      last$out <- cb_specs(p, d, v)
-      last$key <- key
-    }
-    last$out
-  }
+  eval_specs <- viz_specs_cache()
   specs <- shiny::reactive({
     p <- parsed()
     d <- if (has_script()) tryCatch(raw(), error = function(e) NULL)
@@ -88,23 +56,12 @@ viz_script_sources <- function(raw, state) {
     last$specs
   })
   # Script values about to be set, without the multi-select picks their
-  # pool no longer offers once they are: a pool that follows another
-  # control (the terms of the level picked) drops the picks of the old one.
+  # pool no longer offers once they are (viz_script_drop_unoffered()).
   settle <- function(v) {
     shiny::isolate({
       d <- if (has_script()) tryCatch(raw(), error = function(e) NULL)
       if (is.null(d) || !is.list(v)) return(v)
-      sp <- eval_specs(parsed(), d, with_settings(v))
-      for (s in sp) {
-        if (!script_spec_ok(s) || isTRUE(s$off) || script_is_setting(s) ||
-              is.null(v[[s$name]])) {
-          next
-        }
-        x <- v[[s$name]]
-        if (is.list(x)) x <- unlist(x, use.names = FALSE)
-        v[s$name] <- list(cb_offered(x, s))
-      }
-      v
+      viz_script_drop_unoffered(eval_specs(parsed(), d, with_settings(v)), v)
     })
   }
   run <- shiny::reactive({
@@ -144,6 +101,65 @@ viz_script_sources <- function(raw, state) {
            error = run()$error)
     }
   )
+}
+
+# Whether the block has a script that is more than blank lines.
+viz_has_script <- function(state) {
+  s <- state$script()
+  !is.null(s) && nzchar(trimws(paste(s, collapse = "\n")))
+}
+
+# The script's control values, and for each `#| setting` line the block's
+# own setting of that name: the script reads the block's current grouping
+# (`by <- c("AEBODSYS", "AEDECOD")  #| setting`), and the block's code
+# carries it as a literal. `parsed` is cb_parse()'s result, `v` the script
+# values.
+viz_script_with_settings <- function(state, parsed, v) {
+  for (nm in cb_setting_names(parsed)) {
+    rv <- state[[nm]]
+    if (is.function(rv)) {
+      v[nm] <- list(rv())
+    } else if (is.function(state$summaries)) {
+      # A field of the first summary (`facet`, `fill`, `col`), as the
+      # groups table's words of those names read it.
+      s1 <- state$summaries()
+      s1 <- if (is.list(s1) && length(s1) && is.list(s1[[1L]])) s1[[1L]]
+      f <- if (identical(nm, "value")) "col" else nm
+      if (!is.null(s1[[f]])) v[nm] <- list(s1[[f]])
+    }
+  }
+  v
+}
+
+# A function(p, d, v): the declarations evaluated with the values `v`, kept
+# for the next call with the same script, data and values. settle()
+# evaluates them for the values it sets, which specs() then reads back.
+viz_specs_cache <- function() {
+  last <- new.env(parent = emptyenv())
+  function(p, d, v) {
+    key <- list(p, d, v)
+    if (!identical(key, last$key)) {
+      last$out <- cb_specs(p, d, v)
+      last$key <- key
+    }
+    last$out
+  }
+}
+
+# The values `v` without the multi-select picks their control `sp` no longer
+# offers: a pool that follows another control (the terms of the level
+# picked) drops the picks of the old one.
+viz_script_drop_unoffered <- function(sp, v) {
+  for (s in sp) {
+    if (!script_spec_ok(s) || isTRUE(s$off) || script_is_setting(s) ||
+          is.null(v[[s$name]])) {
+      next
+    }
+    x <- v[[s$name]]
+    if (is.list(x)) x <- unlist(x, use.names = FALSE)
+    v[s$name] <- list(cb_offered(x, s))
+  }
+  v
 }
 
 #' Take the script controls' values from the browser

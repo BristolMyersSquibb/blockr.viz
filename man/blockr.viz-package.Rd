@@ -14,7 +14,7 @@ architecture.
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://bristolmyerssquibb.github.io/blockr.viz/}
+  \item \url{https://blockr.site}
   \item \url{https://github.com/BristolMyersSquibb/blockr.viz}
   \item Report bugs at \url{https://github.com/BristolMyersSquibb/blockr.viz/issues}
 }
