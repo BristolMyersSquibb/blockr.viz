@@ -51,6 +51,16 @@
    * many more payloads may still predate it. */
   /** @typedef {{ value: unknown, before: unknown, left: number }} Pending */
 
+  /** An opener with its setting's help line, when the spec gives one. A setting drawn
+   * as several words (limits, ticks) gives it to each word.
+   * @param {VizSlotOpener | null} how @param {VizArg | undefined} arg */
+  const withHelp = (how, arg) => {
+    const help = arg && arg.gear && arg.gear.help;
+    if (!how || !help) return how;
+    if (how.kind === 'pair') how.ends.forEach((end) => { end.help = help; });
+    if (how.kind === 'words') how.words.forEach((w) => { w.how.help = help; });
+    return Object.assign(how, { help });
+  };
   class Gear {
     /** @param {HTMLElement} el @param {VizGearOptions} opts */
     constructor(el, opts) {
@@ -425,12 +435,12 @@
       // `{@value}` is its first summary's column) or names a setting differently.
       const own = this.host.slot && this.host.slot(key, values);
       if (own) {
-        return this._argSlot(key, own.arg, own.value, own.label,
-                             (v) => this.set(own.write(v)), values);
+        return withHelp(this._argSlot(key, own.arg, own.value, own.label,
+                                      (v) => this.set(own.write(v)), values), own.arg);
       }
       if (this.spec[key]) {
-        return this._argSlot(key, this.spec[key], values[key], this.label(key, values),
-                             (v) => this.set({ [key]: v }), values);
+        return withHelp(this._argSlot(key, this.spec[key], values[key], this.label(key, values),
+                                      (v) => this.set({ [key]: v }), values), this.spec[key]);
       }
       return this.scriptSlot(key);
     }

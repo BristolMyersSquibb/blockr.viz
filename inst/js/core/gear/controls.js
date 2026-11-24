@@ -40,15 +40,6 @@
     ranges: 'e.g. Recession: 2008-01-01 to 2009-06-30'
   };
 
-  /** The hover help on a text field, for the syntax the placeholder hides once typed in.
-   * @type {Record<string, string>} */
-  const HELPS = {
-    lines: 'One line per value, separated by ; or a comma. Name a line with Name: value, ' +
-      'e.g. Target: 4; Max: 6',
-    ranges: 'One range per entry, separated by ;. Name a range with Name: from to to, ' +
-      'e.g. Recession: 2008-01-01 to 2009-06-30'
-  };
-
   // -- values as text ---------------------------------------------------------
 
   /** @param {string} t */
@@ -345,8 +336,6 @@
     const ph = placeholderOf(ctx) ||
       PLACEHOLDERS[(ctx.arg.gear && ctx.arg.gear.parse) || ''] || '';
     if (ph) inp.placeholder = ph;
-    const help = HELPS[(ctx.arg.gear && ctx.arg.gear.parse) || ''];
-    if (help) inp.setAttribute('data-blockr-tooltip', help);
     const commit = opts.commit || ((/** @type {string} */ t) => {
       const v = fromText(ctx.arg, t);
       if (!same(v, ctx.value)) ctx.set(v);
