@@ -176,7 +176,7 @@ st_structure <- function(data, title, subtitle, caption, na_rep, continued) {
     df = df, stub_col = stub_col, data_cols = data_cols,
     top = labels$top, leaf = labels$leaf,
     indent = indent,
-    bold_row = st_dot_values(df, ".strong", as.logical, FALSE) | span,
+    bold_row = st_dot_values(df, ".strong", as.logical, FALSE),
     span = span,
     emph_row = st_dot_values(df, ".emph", as.logical, FALSE),
     sec = sec, body = body, stub_hdr = stub_hdr,

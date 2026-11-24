@@ -111,6 +111,10 @@ read.
 
 ## Changes in behaviour
 
+* Table rows are bold only when the data marks them `.strong`. A row that
+  heads deeper rows keeps the body weight in the table view and in the
+  Excel, Word and PowerPoint downloads; it still runs across the table.
+  The parents of a nested groups table stay bold.
 * The chart keeps `category`, `value`, `x`, `y` and `color` when its type
   changes; a setting a type does not use is hidden in the gear, not
   cleared. Picking `func = "count"` no longer clears `value`.
