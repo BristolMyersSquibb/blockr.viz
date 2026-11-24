@@ -36,8 +36,17 @@
 
   /** @type {Record<string, string>} */
   const PLACEHOLDERS = {
-    lines: 'e.g. 2 or Target: 4',
+    lines: 'e.g. 4 or Target: 4; Max: 6',
     ranges: 'e.g. Recession: 2008-01-01 to 2009-06-30'
+  };
+
+  /** The hover help on a text field, for the syntax the placeholder hides once typed in.
+   * @type {Record<string, string>} */
+  const HELPS = {
+    lines: 'One line per value, separated by ; or a comma. Name a line with Name: value, ' +
+      'e.g. Target: 4; Max: 6',
+    ranges: 'One range per entry, separated by ;. Name a range with Name: from to to, ' +
+      'e.g. Recession: 2008-01-01 to 2009-06-30'
   };
 
   // -- values as text ---------------------------------------------------------
@@ -46,7 +55,8 @@
   const scalar = (t) => (t !== '' && Number.isFinite(Number(t)) ? Number(t) : t);
 
   /** "Target: 4; 6" as `[{value: 4, label: "Target"}, {value: 6, label: null}]`.
-   * A colon needs a space after it, so a time of day is no label; numbers
+   * A colon with a space after it starts a value; without one, only after a
+   * name with a letter ("Target:4"), so a time of day is no label. Numbers
    * apart by spaces are several lines.
    * @param {string} text @param {boolean} numbers */
   function parseLines(text, numbers) {
@@ -55,7 +65,7 @@
     for (const raw of String(text).split(/[;,]/)) {
       const part = raw.trim();
       if (!part) continue;
-      const m = /^([^:]+):\s+(.*)$/.exec(part);
+      const m = /^([^:]+):\s+(.*)$/.exec(part) || /^([^:]*\p{L}[^:]*):(.+)$/u.exec(part);
       const label = m ? m[1].trim() : null;
       const v = (m ? m[2] : part).trim();
       if (!v) continue;
@@ -336,6 +346,8 @@
     const ph = placeholderOf(ctx) ||
       PLACEHOLDERS[(ctx.arg.gear && ctx.arg.gear.parse) || ''] || '';
     if (ph) inp.placeholder = ph;
+    const help = HELPS[(ctx.arg.gear && ctx.arg.gear.parse) || ''];
+    if (help) inp.setAttribute('data-blockr-tooltip', help);
     const commit = opts.commit || ((/** @type {string} */ t) => {
       const v = fromText(ctx.arg, t);
       if (!same(v, ctx.value)) ctx.set(v);
