@@ -167,17 +167,49 @@
   };
 
   /**
-   * " (n)" after a label, from a counts map; a non-integer rounds to 2 places.
+   * " (n)" after a label, from a counts map; a non-integer rounds to 2 places. `shown` maps the
+   * value to the text printed for it (displayOf()); the count is still looked up by the value.
    * @param {any} label @param {Map<string, any> | null | undefined} counts
+   * @param {((v: any) => string) | null} [shown]
    */
-  const withCount = (label, counts) => {
+  const withCount = (label, counts, shown) => {
     const s = String(label ?? '');
-    if (!counts) return s;
+    const t = shown ? shown(s) : s;
+    if (!counts) return t;
     const v = counts.get(s);
-    if (v == null) return s;
+    if (v == null) return t;
     const disp = (typeof v === 'number' && !Number.isInteger(v))
       ? Math.round(v * 100) / 100 : v;
-    return s + ' (' + disp + ')';
+    return t + ' (' + disp + ')';
+  };
+
+  /**
+   * The text a reader sees for a value of `col`, or null when the column shows its own values.
+   * R sends the map (derived.display, R/display-labels.R) for a column that names a display
+   * column; keys, clicks and sorting stay on the value.
+   * @param {any} derived @param {string | null | undefined} col
+   * @returns {((v: any) => string) | null}
+   */
+  const displayOf = (derived, col) => {
+    const map = derived && derived.display && col ? derived.display[col] : null;
+    if (!map) return null;
+    return (v) => {
+      const s = String(v ?? '');
+      const t = map[s];
+      return t == null ? s : String(t);
+    };
+  };
+
+  /**
+   * A category's label: its display text and its " (n)" count; null when neither applies, so the
+   * axis prints the value. @param {any} derived @param {string | null | undefined} col
+   * @param {Map<string, any> | null | undefined} counts
+   * @returns {((v: any) => string) | null}
+   */
+  const categoryLabel = (derived, col, counts) => {
+    const shown = displayOf(derived, col);
+    if (!shown && !counts) return null;
+    return (v) => withCount(v, counts, shown);
   };
 
   /** Does show_n cover `surface` ('axis' | 'facet')?
@@ -187,5 +219,6 @@
     return v === surface || v === 'both';
   };
 
-  Object.assign(NS, { RowIndex, NO_ROWS, rowsFromPayload, valuesOf, labelCounts, withCount, countOn });
+  Object.assign(NS, { RowIndex, NO_ROWS, rowsFromPayload, valuesOf, labelCounts, withCount, displayOf,
+                      categoryLabel, countOn });
 })();

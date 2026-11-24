@@ -58,6 +58,8 @@
     return {
       m, look, cfg, ink: look.ink, plotW, P, isBox, split, hexFor, slots, levelInfo,
       SEP: NS.model.BOX_CAT_SEP,
+      // A category's printed text (NS.displayOf()); the slots stay keyed by the value.
+      shown: NS.displayOf(look.derived, cfg.category) || ((/** @type {any} */ v) => String(v)),
       vertical: cfg.orientation !== 'horizontal',
       bodyMeta: NS.agg.statMeta(cfg.summary || (isBox ? 'median_q1_q3' : 'mean_se')),
       whiskMeta: NS.agg.statMeta(cfg.whiskers || 'tukey'),
@@ -210,18 +212,19 @@
    * @param {any} k
    */
   const distCategories = (k) => {
-    const { look, plotW, SEP, split, slots, cats, axisOn, vertical } = k;
+    const { look, plotW, SEP, split, slots, cats, axisOn, vertical, shown } = k;
     /** @type {Map<string, string> | null} */
     const catLabelMap = axisOn ? new Map() : null;
     if (catLabelMap) {
-      for (const s of slots) catLabelMap.set(s.cat, s.group + ' (' + s.count + ')');
+      for (const s of slots) catLabelMap.set(s.cat, shown(s.group) + ' (' + s.count + ')');
     }
-    const short = (/** @type {string} */ v) => String(v).split(SEP)[0];
+    const short = (/** @type {string} */ v) => shown(String(v).split(SEP)[0]);
     const catLabels = cats.map((/** @type {string} */ c) => catLabelMap
-      ? /** @type {string} */ (catLabelMap.get(c)) : (split ? short(c) : c));
+      ? /** @type {string} */ (catLabelMap.get(c)) : short(c));
+    const plain = cats.every((/** @type {string} */ c, /** @type {number} */ i) => catLabels[i] === c);
     const catFmt = catLabelMap
       ? (/** @type {string} */ v) => catLabelMap.get(v) || short(v)
-      : (split ? short : null);
+      : (plain ? null : short);
     const fit = vertical ? option.barMarkParts.fitXLabels(catLabels, plotW, look, catFmt) : null;
     return { catLabels, gut: NS.axes.yGutter(catLabels, look.measure), catFmt,
              xlab: fit && fit.xlab, xFit: fit ? fit.xFit : undefined };
@@ -231,9 +234,13 @@
    * @param {any} k
    */
   const distTooltip = (k) => {
-    const { cfg, P, SEP, isBox, split, hexFor, slots, levels, bodyMeta, whiskMeta } = k;
+    const { cfg, P, SEP, isBox, split, hexFor, slots, levels, bodyMeta, whiskMeta, shown } = k;
     const esc = V.util.esc;
-    const ttHead = (/** @type {any} */ p) => split ? String(p.name).replace(SEP, ' · ') : p.name;
+    const ttHead = (/** @type {any} */ p) => {
+      if (!split) return p.name == null || p.name === '' ? p.name : shown(p.name);
+      const [g, ...rest] = String(p.name).split(SEP);
+      return [shown(g), ...rest].join(' · ');
+    };
     // A split lists every level of the group, the hovered one marked.
     const colorName = split ? esc(P.title(cfg.color) || cfg.color) + ' ' : '';
     const span = (/** @type {any} */ lo, /** @type {any} */ hi) =>
@@ -249,7 +256,7 @@
       const foot = colorName + esc(at.level) + ' · n ' + at.n +
         (isBox && at.whisker ? ' · Whiskers (' + esc(whiskMeta.range) + ') ' +
           span(at.whisker.lo, at.whisker.hi) : '');
-      return V.tooltip.head(esc(at.group)) +
+      return V.tooltip.head(esc(shown(at.group))) +
         V.tooltip.note(esc(bodyMeta.center) + ' (' + esc(bodyMeta.range) + ')') +
         rows.join('') + V.tooltip.SEP + V.tooltip.note(foot);
     };

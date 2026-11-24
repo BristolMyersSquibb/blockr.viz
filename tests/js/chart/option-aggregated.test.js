@@ -272,3 +272,44 @@ test('x_lines and x_ranges on a bar: on the categories, either way round', () =>
   assert.strictEqual(h.series[0].markLine.data[1].yAxis, '2026-10-19');
   assert.strictEqual(h.series[0].markArea.data[0][1].yAxis, '2026-10-05');
 });
+
+// A category whose column names a display column (R/display-labels.R): the axis and the
+// tooltip print the display text, the axis data and the click keys stay the values.
+const SHORT = { display: { ID: { S01: '1', S02: '2', S03: '3' } } };
+
+test('display: a bar prints the display text and keys by the value', () => {
+  const { opt } = build({ category: 'ID', derived: SHORT });
+  assert.deepStrictEqual(plain(opt.yAxis.data), ['S01', 'S03', 'S02']);
+  assert.strictEqual(opt.yAxis.axisLabel.formatter('S03'), '3');
+  const tip = opt.tooltip.formatter([{ name: 'S03', axisValueLabel: 'S03', dataIndex: 1,
+                                       value: 2, seriesName: '' }]);
+  assert.match(tip, />3</);
+  assert.doesNotMatch(tip, /S03/);
+});
+
+test('display: the count follows the display text, a value without one shows itself', () => {
+  const { opt } = build({ category: 'ID', show_n: 'axis', id: 'ID',
+                          derived: { display: { ID: { S01: '1' } } } });
+  assert.strictEqual(opt.yAxis.axisLabel.formatter('S01'), '1 (1)');
+  assert.strictEqual(opt.yAxis.axisLabel.formatter('S02'), 'S02 (1)');
+});
+
+test('display: a waterfall labels its steps and its tooltip head', () => {
+  const { opt } = build({ type: 'waterfall', category: 'ID', value: 'V', func: 'sum',
+                          derived: SHORT, ...VERTICAL });
+  assert.ok(opt.xAxis.data.includes('S01'));
+  assert.strictEqual(opt.xAxis.axisLabel.formatter('S01'), '1');
+  const tip = opt.tooltip.formatter([{ seriesName: 'delta', name: 'S02', value: 1 }]);
+  assert.match(tip, />2</);
+});
+
+test('display: a boxplot names its slots by the display text', () => {
+  const { opt } = build({ type: 'boxplot', category: 'ID', value: 'V', derived: SHORT,
+                          orientation: 'horizontal' });
+  assert.strictEqual(opt.yAxis.axisLabel.formatter('S01'), '1');
+});
+
+test('display: no map for the category leaves the labels alone', () => {
+  const { opt } = build({ category: 'ID', derived: { display: { T: { Rash: 'R' } } } });
+  assert.strictEqual(opt.yAxis.axisLabel.formatter, undefined);
+});

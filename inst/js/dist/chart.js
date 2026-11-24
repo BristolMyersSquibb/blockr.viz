@@ -1,4 +1,4 @@
-// blockr.viz bundle 448edee397fa7ecc55e613519cb1209c, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 0e4677acd365733edc728d1842801cb3, built by tools/bundle.js. Do not edit.
 // sources: drilldown-theme-register.js chart/common.js chart/memo.js chart/chart-types.js chart/colors.js chart/drill.js chart/tooltip.js chart/legend.js chart/format.js chart/agg.js chart/chart-index.js chart/chart-keys.js chart/axes-time.js chart/axes-labels.js chart/model-common.js chart/model-timeline.js chart/model-aggregated.js chart/model-individual.js chart/option-timeline.js chart/option-bar-marks.js chart/option-bar.js chart/option-radial.js chart/option-distribution.js chart/option-aggregated.js chart/option-points.js chart/option-band.js chart/option-domains.js chart/option-individual.js chart/ticks.js chart/zoom-option.js chart/gear.js chart/selection.js chart/family-aggregated.js chart/family-timeline.js chart/family-individual.js chart/zoom.js chart/export.js chart/panels.js chart/view.js
 // --- drilldown-theme-register.js
 // @ts-check
@@ -1006,17 +1006,49 @@
   };
 
   /**
-   * " (n)" after a label, from a counts map; a non-integer rounds to 2 places.
+   * " (n)" after a label, from a counts map; a non-integer rounds to 2 places. `shown` maps the
+   * value to the text printed for it (displayOf()); the count is still looked up by the value.
    * @param {any} label @param {Map<string, any> | null | undefined} counts
+   * @param {((v: any) => string) | null} [shown]
    */
-  const withCount = (label, counts) => {
+  const withCount = (label, counts, shown) => {
     const s = String(label ?? '');
-    if (!counts) return s;
+    const t = shown ? shown(s) : s;
+    if (!counts) return t;
     const v = counts.get(s);
-    if (v == null) return s;
+    if (v == null) return t;
     const disp = (typeof v === 'number' && !Number.isInteger(v))
       ? Math.round(v * 100) / 100 : v;
-    return s + ' (' + disp + ')';
+    return t + ' (' + disp + ')';
+  };
+
+  /**
+   * The text a reader sees for a value of `col`, or null when the column shows its own values.
+   * R sends the map (derived.display, R/display-labels.R) for a column that names a display
+   * column; keys, clicks and sorting stay on the value.
+   * @param {any} derived @param {string | null | undefined} col
+   * @returns {((v: any) => string) | null}
+   */
+  const displayOf = (derived, col) => {
+    const map = derived && derived.display && col ? derived.display[col] : null;
+    if (!map) return null;
+    return (v) => {
+      const s = String(v ?? '');
+      const t = map[s];
+      return t == null ? s : String(t);
+    };
+  };
+
+  /**
+   * A category's label: its display text and its " (n)" count; null when neither applies, so the
+   * axis prints the value. @param {any} derived @param {string | null | undefined} col
+   * @param {Map<string, any> | null | undefined} counts
+   * @returns {((v: any) => string) | null}
+   */
+  const categoryLabel = (derived, col, counts) => {
+    const shown = displayOf(derived, col);
+    if (!shown && !counts) return null;
+    return (v) => withCount(v, counts, shown);
   };
 
   /** Does show_n cover `surface` ('axis' | 'facet')?
@@ -1026,7 +1058,8 @@
     return v === surface || v === 'both';
   };
 
-  Object.assign(NS, { RowIndex, NO_ROWS, rowsFromPayload, valuesOf, labelCounts, withCount, countOn });
+  Object.assign(NS, { RowIndex, NO_ROWS, rowsFromPayload, valuesOf, labelCounts, withCount, displayOf,
+                      categoryLabel, countOn });
 })();
 // --- chart/chart-keys.js
 // @ts-check
@@ -3361,8 +3394,10 @@
     const colorLevels = m.color ? m.color.levels : [];
     const showLegend = colorLevels.length > 0;
     const colors = showLegend ? NS.levelColors(colorLevels, m.color.scale, palette) : null;
+    // A lane's printed text (NS.displayOf()); marks and clicks stay on the value.
+    const laneShown = NS.displayOf(look.derived, m.y.col);
     return { m, look, cfg, ink, theme, title, xAxisType, xCats, x, y: m.y.col, palette,
-             colorLevels, showLegend, colors, onBarLabel: !!cfg.label };
+             colorLevels, showLegend, colors, onBarLabel: !!cfg.label, laneShown };
   };
 
   /** A bar from start to end on its lane, at least 4px wide, clipped to the plot,
@@ -3415,13 +3450,13 @@
   /** The hovered bar: label, else series, else lane as headline, then the lane,
    * the interval and its length, the colour and the tooltip fields. @param {any} k */
   const timelineTooltip = (k) => {
-    const { m, title, xAxisType, xCats, x, y } = k;
+    const { m, title, xAxisType, xCats, x, y, laneShown } = k;
     // An interval starts and ends on a day: a date-time prints its hour, a
     // date its day, whatever the gap between starts.
     const period = m.x.period === 'time' ? 'time' : null;
     return (/** @type {any} */ p) => {
       const v = p.value;
-      const term = String(v[3] ?? '');
+      const term = laneShown ? laneShown(v[3]) : String(v[3] ?? '');
       const colorVal = String(v[4] ?? '');
       const labelVal = m.label != null ? String(v[5] ?? '') : '';
       const detail = String(v[6] ?? '');
@@ -3455,7 +3490,7 @@
    * @param {any} k @param {any} panel @param {any} renderItem @param {any} formatter
    * @param {any} xAxis */
   const timelinePanel = (k, panel, renderItem, formatter, xAxis) => {
-    const { m, look, cfg, ink, theme, palette, colorLevels, showLegend, colors } = k;
+    const { m, look, cfg, ink, theme, palette, colorLevels, showLegend, colors, laneShown } = k;
     const layout = seriesMarks(m, panel);
     const data = (/** @type {number[]} */ idx) =>
       idx.map((i) => ({ value: panel.marks[i] }));
@@ -3467,10 +3502,9 @@
       : [{ type: 'custom', data: data(layout[0]), encode: { x: [0, 1], y: 2 }, renderItem }];
 
     const counts = panel.laneCounts;
-    const gut = NS.axes.yGutter(counts
-      ? panel.lanes.map((/** @type {string} */ t) => NS.withCount(t, counts)) : panel.lanes,
-      look.measure);
-    const display = counts ? (/** @type {any} */ v) => NS.withCount(v, counts) : null;
+    const display = (counts || laneShown)
+      ? (/** @type {any} */ v) => NS.withCount(v, counts, laneShown) : null;
+    const gut = NS.axes.yGutter(display ? panel.lanes.map(display) : panel.lanes, look.measure);
     const opt = {
       ...(theme ? {} : { backgroundColor: 'transparent' }),
       color: (m.color && m.color.scale && m.color.scale.color && colors) ? colors : palette,
@@ -4005,15 +4039,11 @@
     return series;
   };
 
-  /** The groups with their "(n)" count, and the formatter that adds it.
-   * @param {any} panel */
-  const countLabels = (panel) => {
-    const counts = panel.axisCounts;
-    return {
-      catLabels: counts ? panel.groups.map((/** @type {string} */ g) => NS.withCount(g, counts))
-        : panel.groups,
-      catFmt: counts ? (/** @type {any} */ v) => NS.withCount(v, counts) : null
-    };
+  /** The groups as the axis prints them, and the formatter that prints them: the category's
+   * display text (NS.displayOf()) with its "(n)" count. @param {any} panel @param {any} look */
+  const countLabels = (panel, look) => {
+    const catFmt = NS.categoryLabel(look.derived, look.cfg.category, panel.axisCounts);
+    return { catLabels: catFmt ? panel.groups.map(catFmt) : panel.groups, catFmt };
   };
 
   /** The category axis. "(n)" comes from a formatter, so the axis data stays the bare group clicks
@@ -4021,7 +4051,7 @@
    * resize. @param {any} k */
   const barCategoryAxis = (k) => {
     const { panel, groups, colors, vertical, hlLit, ink, look } = k;
-    const { catLabels, catFmt } = countLabels(panel);
+    const { catLabels, catFmt } = countLabels(panel, look);
     const gut = NS.axes.yGutter(catLabels, look.measure);
     /** @type {((axisLabel: any) => any) | null} */
     let decorate = null;
@@ -4115,6 +4145,9 @@
     const showN = cfg.func !== 'count' && cfg.func !== 'identity';
     const additive = cfg.func === 'count' || cfg.func === 'sum';
     const colorName = split ? esc(title(cfg.color) || cfg.color) + ' ' : '';
+    // The head names the category as the axis does; nOf and ttRep stay keyed by the value.
+    const shown = m.histogram ? null : NS.displayOf(k.look.derived, cfg.category);
+    const colorShown = NS.displayOf(k.look.derived, cfg.color);
     /** The rows of the hovered category: one per level, else the hovered bar. */
     const levelsAt = (/** @type {any} */ arg) => {
       const p = Array.isArray(arg) ? arg[0] : arg;
@@ -4151,14 +4184,15 @@
       const head = /** @type {any} */ (ps[0]).axisValueLabel || ps[0].name || '';
       const vals = ps.filter((/** @type {any} */ p) => p && p.value != null);
       const rows = vals.map((/** @type {any} */ p) => V.tooltip.row(
-        split ? colorName + esc(p.seriesName) : esc(aggLabel), valueText(p, head),
+        split ? colorName + esc(colorShown ? colorShown(p.seriesName) : p.seriesName)
+          : esc(aggLabel), valueText(p, head),
         split ? p.color : null, hit == null ? null : p.seriesName === hit)).join('');
       const total = split && !showPercent && additive && vals.length > 1
         ? V.tooltip.SEP + V.tooltip.row(esc(aggLabel), fmtRaw(vals.reduce(
           (/** @type {number} */ a, /** @type {any} */ p) => a + Number(p.value || 0), 0)))
         : '';
       const note = split && !showPercent && !additive ? V.tooltip.note(esc(aggLabel)) : '';
-      return V.tooltip.head(esc(head)) + note + rows + total + extraRows(head);
+      return V.tooltip.head(esc(shown ? shown(head) : head)) + note + rows + total + extraRows(head);
     };
     // An unsplit bar answers anywhere over its category; the pointer stays
     // invisible, as hover marks nothing.
@@ -4276,8 +4310,9 @@
     const wvf = cfg.func === 'pct_distinct' ? null : NS.valueFormat(cfg);
     const { base, delta, lo, hi } = waterfallSteps(m, panel, cfg, labelsOn, wvf);
 
-    const { catLabels, catFmt } = countLabels(panel);
+    const { catLabels, catFmt } = countLabels(panel, look);
     const { xlab, xFit } = fitXLabels(catLabels, plotW, look, catFmt);
+    const shown = NS.displayOf(look.derived, cfg.category);
     const catAxis = { ...NS.axes.categoryAxis(panel.groups, ink, { xlab, display: catFmt }),
                       splitLine: { show: false } };
     const valAxis = NS.axes.valueAxis(ink, 'value', NS.axisName(P.valueTitle, cfg.measure, cfg, look.derived), 45, {
@@ -4313,7 +4348,7 @@
           formatter: (/** @type {any} */ params) => {
             const p = (params || []).find((/** @type {any} */ x) => x.seriesName === 'delta');
             if (!p) return '';
-            return V.tooltip.head(V.util.esc(p.name)) + V.tooltip.row(V.util.esc(P.aggLabel),
+            return V.tooltip.head(V.util.esc(shown ? shown(p.name) : p.name)) + V.tooltip.row(V.util.esc(P.aggLabel),
               p.value == null ? '–' : (wvf ? wvf(p.value) : V.util.num(p.value)));
           }
         },
@@ -4456,6 +4491,8 @@
     return {
       m, look, cfg, ink: look.ink, plotW, P, isBox, split, hexFor, slots, levelInfo,
       SEP: NS.model.BOX_CAT_SEP,
+      // A category's printed text (NS.displayOf()); the slots stay keyed by the value.
+      shown: NS.displayOf(look.derived, cfg.category) || ((/** @type {any} */ v) => String(v)),
       vertical: cfg.orientation !== 'horizontal',
       bodyMeta: NS.agg.statMeta(cfg.summary || (isBox ? 'median_q1_q3' : 'mean_se')),
       whiskMeta: NS.agg.statMeta(cfg.whiskers || 'tukey'),
@@ -4608,18 +4645,19 @@
    * @param {any} k
    */
   const distCategories = (k) => {
-    const { look, plotW, SEP, split, slots, cats, axisOn, vertical } = k;
+    const { look, plotW, SEP, split, slots, cats, axisOn, vertical, shown } = k;
     /** @type {Map<string, string> | null} */
     const catLabelMap = axisOn ? new Map() : null;
     if (catLabelMap) {
-      for (const s of slots) catLabelMap.set(s.cat, s.group + ' (' + s.count + ')');
+      for (const s of slots) catLabelMap.set(s.cat, shown(s.group) + ' (' + s.count + ')');
     }
-    const short = (/** @type {string} */ v) => String(v).split(SEP)[0];
+    const short = (/** @type {string} */ v) => shown(String(v).split(SEP)[0]);
     const catLabels = cats.map((/** @type {string} */ c) => catLabelMap
-      ? /** @type {string} */ (catLabelMap.get(c)) : (split ? short(c) : c));
+      ? /** @type {string} */ (catLabelMap.get(c)) : short(c));
+    const plain = cats.every((/** @type {string} */ c, /** @type {number} */ i) => catLabels[i] === c);
     const catFmt = catLabelMap
       ? (/** @type {string} */ v) => catLabelMap.get(v) || short(v)
-      : (split ? short : null);
+      : (plain ? null : short);
     const fit = vertical ? option.barMarkParts.fitXLabels(catLabels, plotW, look, catFmt) : null;
     return { catLabels, gut: NS.axes.yGutter(catLabels, look.measure), catFmt,
              xlab: fit && fit.xlab, xFit: fit ? fit.xFit : undefined };
@@ -4629,9 +4667,13 @@
    * @param {any} k
    */
   const distTooltip = (k) => {
-    const { cfg, P, SEP, isBox, split, hexFor, slots, levels, bodyMeta, whiskMeta } = k;
+    const { cfg, P, SEP, isBox, split, hexFor, slots, levels, bodyMeta, whiskMeta, shown } = k;
     const esc = V.util.esc;
-    const ttHead = (/** @type {any} */ p) => split ? String(p.name).replace(SEP, ' · ') : p.name;
+    const ttHead = (/** @type {any} */ p) => {
+      if (!split) return p.name == null || p.name === '' ? p.name : shown(p.name);
+      const [g, ...rest] = String(p.name).split(SEP);
+      return [shown(g), ...rest].join(' · ');
+    };
     // A split lists every level of the group, the hovered one marked.
     const colorName = split ? esc(P.title(cfg.color) || cfg.color) + ' ' : '';
     const span = (/** @type {any} */ lo, /** @type {any} */ hi) =>
@@ -4647,7 +4689,7 @@
       const foot = colorName + esc(at.level) + ' · n ' + at.n +
         (isBox && at.whisker ? ' · Whiskers (' + esc(whiskMeta.range) + ') ' +
           span(at.whisker.lo, at.whisker.hi) : '');
-      return V.tooltip.head(esc(at.group)) +
+      return V.tooltip.head(esc(shown(at.group))) +
         V.tooltip.note(esc(bodyMeta.center) + ' (' + esc(bodyMeta.range) + ')') +
         rows.join('') + V.tooltip.SEP + V.tooltip.note(foot);
     };

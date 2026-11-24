@@ -15,6 +15,7 @@ chart_view <- function(kit, src) {
   meta_cache <- last_value_cache()
   cells_cache <- last_value_cache()
   levels_cache <- last_value_cache()
+  display_cache <- last_value_cache()
   board_theme <- board_echart_theme()
   scale_map <- dd_board_scale_map()
 
@@ -54,6 +55,14 @@ chart_view <- function(kit, src) {
   hl_levels <- shiny::reactive({
     chart_hl_levels(src$values(), src$plain(), levels_cache)
   })
+  display <- shiny::reactive({
+    v <- src$values()
+    d <- src$plain()
+    raw <- tryCatch(src$raw(), error = function(e) NULL)
+    display_cache(list(v[c("type", "category", "color", "series", "facet",
+                           "facet_row", "x", "y")], d, raw),
+                  function() chart_display_labels(v, d, raw))
+  })
   scales <- shiny::reactive({
     v <- src$values()
     shiny_json(dd_scales_config(
@@ -76,6 +85,7 @@ chart_view <- function(kit, src) {
       hist = src$hist()$edges,
       levels = hl_levels(),
       scales = scales(),
+      display = display(),
       palette = as.list(dd_palette()),
       theme = board_theme(),
       theme_src = echart_theme_src(board_theme())

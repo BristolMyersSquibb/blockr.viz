@@ -22,6 +22,7 @@ R: chart,R/chart-dep.R,1800
 R: chart,R/band-series.R,1800
 R: chart,R/describe-chart.R,1800
 R: chart,R/scale-map-resolve.R,1800
+R: chart,R/display-labels.R,1800
 R: table shell and shared model,R/table-block.R,1200
 R: table shell and shared model,R/table-model.R,1200
 R: table shell and shared model,R/table-drill.R,1200
