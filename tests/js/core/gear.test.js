@@ -382,7 +382,8 @@ test('number: held in its bounds, committed on Enter', () => {
 test('text: lines and ranges parse into their wire forms and back', () => {
   const t = setup({ type: 'line', x: 'ADT', y: 'AVAL', value_lines: null });
   const i = inp(t.el, 'value_lines');
-  assert.equal(i.placeholder, 'e.g. 2 or Target: 4');
+  assert.equal(i.placeholder, 'e.g. 4 or Target: 4; Max: 6');
+  assert.match(i.getAttribute('data-blockr-tooltip'), /separated by ; or a comma/);
   type(t.win, i, 'Target: 4; 6');
   assert.deepEqual(lastSet(t).values, { value_lines: [{ value: 4, label: 'Target' },
                                                   { value: 6, label: null }] });
