@@ -59,7 +59,11 @@
     input.className = 'blockr-slot-input';
     input.value = before;
     input.setAttribute('aria-label', how.label);
-    input.size = Math.max(3, before.length + 1);
+    // The box grows with its text, 4 to 34 characters; past that the
+    // sentence wraps it to a line of its own. CSS field-sizing does the
+    // same where the browser has it.
+    const fit = () => { input.size = Math.min(34, Math.max(4, input.value.length + 1)); };
+    fit();
     /** @param {number} v */
     const fix = (v) => (num ? Math.min(num.max, Math.max(num.min, v)) : v);
     let done = false;
@@ -78,6 +82,7 @@
         how.set(how.fromText(text));
       }
     };
+    es.on(input, 'input', fit);
     es.on(input, 'click', (e) => e.stopPropagation());
     es.on(input, 'keydown', (ev) => {
       const e = /** @type {KeyboardEvent} */ (ev);

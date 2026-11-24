@@ -263,6 +263,13 @@ test('a word whose setting has help shows it under what the word opens', () => {
   const help = t.doc.querySelector('.vz-slot-help');
   assert.ok(input && help, 'the offer types over, with the help line');
   assert.match(help.textContent, /Name a line with Name: value/);
+  assert.equal(input.size, 4, 'an empty box starts at 4 characters');
+  input.value = 'Mean age: 41';
+  input.dispatchEvent(new t.win.Event('input'));
+  assert.equal(input.size, 13, 'it grows with its text');
+  input.value = 'Mean age: 41; Upper limit: 65; Lower limit: 18';
+  input.dispatchEvent(new t.win.Event('input'));
+  assert.equal(input.size, 34, 'up to 34 characters');
   key(t, input, 'Escape');
   assert.equal(t.doc.querySelector('.vz-slot-help'), null, 'gone with the field');
   slots.dispose();

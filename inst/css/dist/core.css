@@ -1,4 +1,4 @@
-/* blockr.viz bundle 1cf008d68f59d38e73306c6f7f635291, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle 80bc3576fe419da566d5feda43655eac, built by tools/bundle.js. Do not edit. */
 /* sources: frame.css gear.css */
 /* --- frame.css */
 /* The frame every block view draws in (core/frame.js): header, titles,
@@ -769,6 +769,9 @@
   /* A field being typed in: the accent edge and the focus ring. */
   box-shadow: var(--blockr-focus-ring, 0 0 0 3px rgba(37, 99, 235, 0.12));
   font-variant-numeric: tabular-nums;
+  field-sizing: content;
+  min-width: 4ch;
+  max-width: 34ch;
 }
 /* A number keeps type=number for the keyboard, without the spinner. */
 .blockr-slot-input[type=number] {
