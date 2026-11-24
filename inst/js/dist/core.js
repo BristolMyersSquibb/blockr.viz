@@ -1,4 +1,4 @@
-// blockr.viz bundle 28263d7326db97c08227151b1e84bebc, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle 18c861db3688403703680e587045df90, built by tools/bundle.js. Do not edit.
 // sources: core/namespace.js core/util.js core/lazy.js core/tooltip.js core/scope.js core/busy.js core/binding.js core/download.js core/capture.js core/titles.js core/title-words.js core/ticks.js core/slot-pair.js core/gear/tray-nav.js core/gear/sections.js core/gear/tiles.js core/gear/icons.js core/gear/controls.js core/gear/range.js core/gear/ticks.js core/gear/profile.js core/gear/tray.js core/gear/counts.js core/gear/focus.js core/gear/engine.js core/frame.js core/data-view.js core/script-band.js spec/chart.js spec/table.js
 // --- core/namespace.js
 // @ts-check
@@ -2631,8 +2631,17 @@
 
   /** @type {Record<string, string>} */
   const PLACEHOLDERS = {
-    lines: 'e.g. 2 or Target: 4',
+    lines: 'e.g. 4 or Target: 4; Max: 6',
     ranges: 'e.g. Recession: 2008-01-01 to 2009-06-30'
+  };
+
+  /** The hover help on a text field, for the syntax the placeholder hides once typed in.
+   * @type {Record<string, string>} */
+  const HELPS = {
+    lines: 'One line per value, separated by ; or a comma. Name a line with Name: value, ' +
+      'e.g. Target: 4; Max: 6',
+    ranges: 'One range per entry, separated by ;. Name a range with Name: from to to, ' +
+      'e.g. Recession: 2008-01-01 to 2009-06-30'
   };
 
   // -- values as text ---------------------------------------------------------
@@ -2931,6 +2940,8 @@
     const ph = placeholderOf(ctx) ||
       PLACEHOLDERS[(ctx.arg.gear && ctx.arg.gear.parse) || ''] || '';
     if (ph) inp.placeholder = ph;
+    const help = HELPS[(ctx.arg.gear && ctx.arg.gear.parse) || ''];
+    if (help) inp.setAttribute('data-blockr-tooltip', help);
     const commit = opts.commit || ((/** @type {string} */ t) => {
       const v = fromText(ctx.arg, t);
       if (!same(v, ctx.value)) ctx.set(v);
