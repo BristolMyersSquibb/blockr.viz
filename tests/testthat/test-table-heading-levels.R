@@ -1,6 +1,8 @@
 # Heading rows follow one rule in every layout (apps/table-heading-levels):
-# a row that heads other rows is 600 in the body ink and runs across the row
-# on one line; the rows under it are 400 in the body ink. A heading with no
+# a row that heads other rows is in the body ink and runs across the row on
+# one line; the rows under it are 400 in the body ink. It is 600 only when
+# the data asks for bold (`.strong`): a groups parent does, a finished
+# table's "AGE (years)" without `.strong` stays at 400. A heading with no
 # values of its own is one cell (a groups parent by default, the compact
 # look's parents, a finished table's "AGE (years)"); a groups parent with
 # its summaries (`group_rows = "summary"`) is one plain row, its name in the
@@ -112,7 +114,7 @@ expect_level <- function(r, weight, label) {
   expect_identical(r$color, DARK, label = label)
 }
 
-test_that("heading rows are 600, across the row on one line, in every layout", {
+test_that("heading rows run across the row on one line, in every layout", {
   app <- start_heading_app()
   probe <- function(view) {
     app$get_js(sprintf("window.headProbe('%s')", view), timeout = 60 * 1000)
@@ -160,7 +162,8 @@ test_that("heading rows are 600, across the row on one line, in every layout", {
   expect_lte(k$labelCol, 201)
   expect_gt(k$headText, k$labelCol)
 
-  # A finished table: a heading with empty values spans the row.
+  # A finished table: a heading with empty values spans the row. It has no
+  # `.strong`, so it is not bold.
   f <- probe("fin")
   texts <- vapply(f$rows, `[[`, "", "text")
   for (lab in c("AGE (years)", "Body mass index at screening (kg/m2)",
@@ -168,7 +171,7 @@ test_that("heading rows are 600, across the row on one line, in every layout", {
     r <- f$rows[[match(lab, texts)]]
     expect_identical(r$kind, "heading", label = lab)
     expect_identical(r$colspan, f$ncol, label = lab)
-    expect_level(r, "600", lab)
+    expect_level(r, "400", lab)
     expect_identical(r$lines, 1L, label = lab)
   }
   expect_level(f$rows[[match("F", texts)]], "400", "finished leaf")

@@ -16,7 +16,8 @@
 #'     the HTML renderer. These and any other dot-prefixed columns are not
 #'     exported as data columns.
 #'   \item a `.strong` row, or a row above a deeper `.indent`, whose data
-#'     cells are all empty is a heading: bold and merged across the table.
+#'     cells are all empty is a heading: merged across the table. It is bold
+#'     only when it is `.strong`.
 #'   \item data columns carry their pre-formatted strings. A name with a
 #'     `"||"` (`"Placebo||CAT1"`) is a two-level spanner: the part before the
 #'     `"||"` becomes a merged top header cell; `attr(col, "label")`
@@ -88,8 +89,7 @@ xlsx_annotated_sheet <- function(wb, df, sheet, title, subtitle, caption,
   total_out <- n_row + length(sec$hdr_pos)
   span <- annotated_span_rows(df, data_cols)
   xlsx_write_body(wb, sheet, df, stub_col, data_cols, sec, r, total_out)
-  xlsx_style_body(wb, sheet, df, data_cols, sec, r, indent, bold_row | span,
-                  digits)
+  xlsx_style_body(wb, sheet, df, data_cols, sec, r, indent, bold_row, digits)
   # Heading rows run across the table, as in the table view: the section
   # headers and the rows that head others with no values of their own.
   if (n_col > 1L) {

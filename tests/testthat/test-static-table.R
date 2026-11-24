@@ -415,8 +415,7 @@ test_that("a heading row with no values is merged across the table", {
   spans <- ft$body$spans$rows
   expect_identical(spans[, 1L], c(3, 1, 1, 3, 1))
   expect_true(all(spans[c(1L, 4L), 2:3] == 0))
-  # Bold, and not part of what the stub's width has to hold.
+  # Not bold: bold comes only from `.strong`.
   bold <- ft$body$styles$text$bold$data
-  expect_true(all(bold[c(1L, 4L), 1L]))
-  expect_false(any(bold[c(2L, 3L, 5L), 1L]))
+  expect_false(any(bold[, 1L]))
 })

@@ -1,4 +1,4 @@
-/* blockr.viz bundle e63d098f837cf4c6071a01618c175899, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle 08dde594407083188bc6bcbf0b09c6f7, built by tools/bundle.js. Do not edit. */
 /* sources: table.css table-structured.css table-groups.css table-view.css table-cards.css */
 /* --- table.css */
 /* The base table rules, scoped to blockr.viz's own containers: unscoped,
@@ -818,18 +818,20 @@ input.vz-table-search:focus {
   border-bottom: 0;
   padding-bottom: 7px;
 }
-/* The second selector matches the stub rule's `:not(.vz-table-groups-table)`,
-   so a bold row's stub is bold too. */
+/* Bold comes only from the data: a row the producer marks `.strong`
+   (vz-table-bold). The second selector matches the stub rule's
+   `:not(.vz-table-groups-table)`, so a bold row's stub is bold too. A groups
+   table bolds only the label of its nested parents (table_groups_rows()). */
 .vz-table-structured .blockr-table tbody tr.vz-table-bold td,
-.vz-table-structured .blockr-table:not(.vz-table-groups-table) tbody tr.vz-table-bold td.vz-table-stub {
+.vz-table-structured .blockr-table:not(.vz-table-groups-table) tbody tr.vz-table-bold td.vz-table-stub,
+.vz-table-groups .blockr-table tbody tr.vz-table-bold > td.vz-table-stub {
   font-weight: var(--blockr-font-weight-semibold, 600);
 }
-/* Headings. A row that heads other rows, at any level, has its label at
-   600 in the body ink, 13px from the third level on, as the section
-   headings below; the rows under it stay at 400 (html.js row()). Groups
-   tables carry the same classes. */
+/* Headings. A row that heads other rows, at any level, has its label in the
+   body ink, 13px from the third level on; it keeps the body weight, so a row
+   with sub-rows does not read as ranked above its siblings. Groups tables
+   carry the same classes. */
 :is(.vz-table-structured, .vz-table-groups) .blockr-table tbody tr.vz-table-heads > td.vz-table-stub {
-  font-weight: var(--blockr-font-weight-semibold, 600);
   color: var(--blockr-color-text-default, #111827);
 }
 :is(.vz-table-structured, .vz-table-groups) .blockr-table tbody tr.vz-table-heads-deep > td.vz-table-stub {

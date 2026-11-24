@@ -230,5 +230,8 @@ test_that("write_annotated_xlsx() merges heading rows across the table", {
   bold_stub_rows <- unlist(lapply(wb$styleObjects, function(s) {
     if ("BOLD" %in% s$style$fontDecoration && 1L %in% s$cols) s$rows
   }))
-  expect_true(3L %in% bold_stub_rows)
+  # The heading row is merged but not bold (no `.strong`); the `.strong`
+  # Total row on row 5 is.
+  expect_false(3L %in% bold_stub_rows)
+  expect_true(5L %in% bold_stub_rows)
 })
