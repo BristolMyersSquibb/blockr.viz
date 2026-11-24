@@ -5,9 +5,9 @@
 # The chart still groups, sorts, colours and claims by the column's own
 # values. Only the printed text reads the other column: the category axis,
 # the lanes of a timeline, tooltip heads, legend entries. A producer upstream
-# sets the attribute (a clinical package labels its long subject ids by the
-# short ones); viz names no columns itself. A column whose display column is
-# gone from the data, or a value with no display value, shows itself.
+# sets the attribute (for example, long codes labelled by short names); viz
+# names no columns itself. A column whose display column is gone from the
+# data, or a value with no display value, shows itself.
 #
 # The browser gets one map per labelled column, `derived$display`:
 # list(<col> = list(<value> = <label>, ...)). It holds the values the data

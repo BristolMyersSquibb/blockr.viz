@@ -310,6 +310,6 @@ test('display: a boxplot names its slots by the display text', () => {
 });
 
 test('display: no map for the category leaves the labels alone', () => {
-  const { opt } = build({ category: 'ID', derived: { display: { T: { Rash: 'R' } } } });
+  const { opt } = build({ category: 'ID', derived: { display: { other: { a: 'A' } } } });
   assert.strictEqual(opt.yAxis.axisLabel.formatter, undefined);
 });
