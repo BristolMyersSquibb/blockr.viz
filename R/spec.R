@@ -178,12 +178,15 @@ type_fields <- function(fields, spec) {
 #' @param when Another argument that must be set for the row to show.
 #' @param icons For `segmented`, draw each option's icon beside its word
 #'   (`inst/js/core/gear/icons.js`, keyed `<argument>:<value>`).
+#' @param help One plain sentence for the user, shown at the foot of what a
+#'   subtitle word or offer opens for this setting (`title-words.js`).
 #' @noRd
 gear <- function(group, control, label, labels = NULL, parse = NULL,
-                 when = NULL, icons = FALSE) {
+                 when = NULL, icons = FALSE, help = NULL) {
   structure(
     list(group = group, control = control, label = label, labels = labels,
-         parse = parse, when = when, icons = if (isTRUE(icons)) TRUE),
+         parse = parse, when = when, icons = if (isTRUE(icons)) TRUE,
+         help = help),
     class = "viz_gear"
   )
 }

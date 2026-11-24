@@ -24,6 +24,25 @@
     });
   };
 
+  /** The setting's help as a muted line: at the foot of a word's menu
+   * (`panel`), or hung under the field typed over a word.
+   * @param {string | undefined} help
+   * @param {{ panel?: Element | null, under?: HTMLElement, scope?: VizScope }} at
+   *   `scope` takes the floating line away when the field goes. */
+  function helpLine(help, at) {
+    if (!help) return;
+    const line = document.createElement('div');
+    line.className = 'vz-slot-help';
+    line.textContent = help;
+    if (at.panel) { at.panel.appendChild(line); return; }
+    if (!at.under || !at.scope) return;
+    line.classList.add('vz-slot-help--floating');
+    document.body.appendChild(line);
+    const place = ui().place;
+    const placed = place ? place(line, at.under, { width: { min: 180, max: 320 } }) : null;
+    at.scope.own({ dispose: () => { if (placed) placed.stop(); line.remove(); } });
+  }
+
   /** Type a value over its word: Enter or leaving commits, Escape puts the
    * word back. A number is held in its range and steps on the arrow keys
    * (by ten with Shift); an emptied number keeps its value, unless it can be
@@ -74,6 +93,7 @@
     });
     es.on(input, 'blur', () => finish(true));
     anchor.replaceWith(input);
+    helpLine(how.help, { under: input, scope: es });
     input.focus();
     input.select();
   }
@@ -91,7 +111,7 @@
     const at = (/** @type {unknown} */ v) => keys[how.options.findIndex((o) => C.same(o.value, v))];
     const back = (/** @type {string} */ k) => how.options[keys.indexOf(k)];
     anchor.classList.add('blockr-slot--open');
-    return Sel.menu(anchor, {
+    const menu = Sel.menu(anchor, {
       options, mode: how.multi ? 'multi' : 'single', title: how.label,
       selected: how.multi ? (/** @type {unknown[]} */ (how.selected || [])).map(at) : at(how.selected),
       labelFirst: by === 'label', searchPlaceholder: 'Filter',
@@ -105,6 +125,11 @@
         onClose();
       }
     });
+    // The menu's panel is the last one blockr.ui hung on <body>; it goes with
+    // the menu, and the line with it.
+    const panels = document.querySelectorAll('body > .blockr-select__dropdown--menu');
+    helpLine(how.help, { panel: panels[panels.length - 1] });
+    return menu;
   }
 
   /** The settings a sentence would name if they were set, three at most.

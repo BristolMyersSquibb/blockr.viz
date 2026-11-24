@@ -422,7 +422,8 @@
       "gear": {
         "group": "Look",
         "control": "ticks",
-        "label": "X ticks"
+        "label": "X ticks",
+        "help": "Auto picks the ticks. Every sets a step, at lists the ticks, e.g. 0, 25, 50."
       },
       "slot": true,
       "ctrl": true
@@ -438,7 +439,8 @@
       "gear": {
         "group": "Look",
         "control": "ticks",
-        "label": "Y ticks"
+        "label": "Y ticks",
+        "help": "Auto picks the ticks. Every sets a step, at lists the ticks, e.g. 0, 25, 50."
       },
       "slot": true,
       "ctrl": true
@@ -550,7 +552,8 @@
         "group": "Reference lines",
         "control": "text",
         "label": "Horizontal",
-        "parse": "lines"
+        "parse": "lines",
+        "help": "Separate lines with ;. Name a line with Name: value, e.g. Target: 4; Max: 6."
       },
       "slot": true,
       "ctrl": true
@@ -568,7 +571,8 @@
         "group": "Reference lines",
         "control": "text",
         "label": "Vertical",
-        "parse": "lines"
+        "parse": "lines",
+        "help": "Separate lines with ;. Name a line with Name: value, e.g. Target: 4; Max: 6."
       },
       "slot": true,
       "ctrl": true
@@ -890,7 +894,8 @@
       "gear": {
         "group": "Numbers",
         "control": "column",
-        "label": "Individual id"
+        "label": "Individual id",
+        "help": "Group counts count each individual once, however many rows they have."
       },
       "slot": true,
       "ctrl": true
@@ -1051,7 +1056,8 @@
         "group": "Numbers",
         "control": "select",
         "label": "Percent of",
-        "labels": ["Facet", "Category", "Color", "Whole chart"]
+        "labels": ["Facet", "Category", "Color", "Whole chart"],
+        "help": "What 100% is: each facet, each category, each color, or the whole chart."
       },
       "slot": true,
       "ctrl": true
@@ -1070,7 +1076,8 @@
         "group": "Look",
         "control": "select",
         "label": "Panel scales",
-        "labels": ["Shared across panels", "Free x and y per panel", "Free y per panel"]
+        "labels": ["Shared across panels", "Free x and y per panel", "Free y per panel"],
+        "help": "Shared keeps panels comparable. Free lets each panel fit its own data."
       },
       "slot": true,
       "ctrl": true

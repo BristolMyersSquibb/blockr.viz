@@ -19,6 +19,13 @@ SPEC_CHART_INDIVIDUAL <- c("scatter", "line", "area", "band")
 SPEC_CHART_NUMBER_TYPES <- c(SPEC_CHART_AGGREGATED, "scatter", "line",
                              "area", "histogram")
 
+# The help line under what a subtitle word opens, shared by the settings that
+# read the same way.
+SPEC_LINES_HELP <- paste("Separate lines with ;. Name a line with Name: value,",
+                         "e.g. Target: 4; Max: 6.")
+SPEC_TICKS_HELP <- paste("Auto picks the ticks. Every sets a step, at lists the",
+                         "ticks, e.g. 0, 25, 50.")
+
 # viz: long the spec declares one argument per entry
 chart_spec_mapping <- function() {
   list(
@@ -306,7 +313,7 @@ chart_spec_look <- function() {
     x_ticks = chart_arg(
       type = "ticks", null = "auto",
       applies = c("scatter", "line", "area", "band", "gantt"),
-      gear = gear("Look", "ticks", "X ticks"),
+      gear = gear("Look", "ticks", "X ticks", help = SPEC_TICKS_HELP),
       example = "7 days",
       describe = paste(
         "Where the x axis puts its ticks. One number is a step: `10` ticks",
@@ -324,7 +331,7 @@ chart_spec_look <- function() {
       type = "ticks", null = "auto",
       applies = c("scatter", "line", "area", "band", "bar", "histogram",
                   "waterfall", "boxplot", "pointrange"),
-      gear = gear("Look", "ticks", "Y ticks"),
+      gear = gear("Look", "ticks", "Y ticks", help = SPEC_TICKS_HELP),
       example = 25,
       describe = paste(
         "As `x_ticks`, for the value axis: y on a scatter, line, area or",
@@ -404,7 +411,9 @@ chart_spec_numbers <- function() {
       values = c("facet", "category", "color", "total"),
       applies = "bar",
       gear = gear("Numbers", "select", "Percent of",
-                  labels = c("Facet", "Category", "Color", "Whole chart")),
+                  labels = c("Facet", "Category", "Color", "Whole chart"),
+                  help = paste("What 100% is: each facet, each category, each color,",
+                               "or the whole chart.")),
       example = "facet",
       describe = paste(
         "The role whose levels a `pct_distinct` denominator is taken",
@@ -426,7 +435,9 @@ chart_spec_numbers <- function() {
 
     id = chart_arg(
       type = "column", null = "count rows",
-      gear = gear("Numbers", "column", "Individual id"),
+      gear = gear("Numbers", "column", "Individual id",
+                  help = paste("Group counts count each individual once, however",
+                               "many rows they have.")),
       example = "customer_id",
       describe = paste(
         "Column that identifies an individual, counted distinct by the band",
@@ -442,7 +453,8 @@ chart_spec_lines <- function() {
       type = "numbers", null = "no lines",
       applies = c("bar", "waterfall", "boxplot", "pointrange", "scatter", "line",
                   "area", "histogram"),
-      gear = gear("Reference lines", "text", "Horizontal", parse = "lines"),
+      gear = gear("Reference lines", "text", "Horizontal", parse = "lines",
+                  help = SPEC_LINES_HELP),
       describe = paste(
         "Positions of dashed reference lines across the value axis: `value`'s",
         "axis, y on a scatter, line, area or histogram. Names are labels.",
@@ -453,7 +465,8 @@ chart_spec_lines <- function() {
     x_lines = chart_arg(
       type = type_values(of = "x"), null = "no lines",
       applies = c("bar", "scatter", "line", "area"),
-      gear = gear("Reference lines", "text", "Vertical", parse = "lines"),
+      gear = gear("Reference lines", "text", "Vertical", parse = "lines",
+                  help = SPEC_LINES_HELP),
       describe = paste(
         "Positions of dashed reference lines across x, or across a bar's",
         "category axis: numbers, dates or category values. Names are labels."
@@ -520,7 +533,9 @@ chart_spec_facets <- function() {
       applies = except("pie", "treemap"),
       gear = gear("Look", "select", "Panel scales",
                   labels = c("Shared across panels", "Free x and y per panel",
-                             "Free y per panel")),
+                             "Free y per panel"),
+                  help = paste("Shared keeps panels comparable. Free lets each panel",
+                               "fit its own data.")),
       example = "fixed",
       describe = paste(
         "\"fixed\" shares one scale across panels, \"free\" lets each panel",

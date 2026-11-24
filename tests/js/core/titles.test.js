@@ -250,6 +250,39 @@ test('slots with blockr.ui: a word opens Blockr.Select.menu and a pick sends', {
   slots.dispose();
 });
 
+test('a word whose setting has help shows it under what the word opens', () => {
+  const t = setup();
+  const slots = t.V.titleWords.slots({ gear: t.gear, scope: t.scope });
+  const head = t.doc.body.appendChild(t.doc.createElement('div'));
+  slots.paint(head, { parts: [{ text: 'ARM', arg: 'x' }], offers: ['value_lines'] });
+  head.querySelector('.blockr-slot').click();
+  assert.equal(t.doc.querySelector('.vz-slot-help'), null, 'a setting without help shows none');
+  slots.close();
+  head.querySelector('.blockr-slot-offer').click();
+  const input = head.querySelector('input.blockr-slot-input');
+  const help = t.doc.querySelector('.vz-slot-help');
+  assert.ok(input && help, 'the offer types over, with the help line');
+  assert.match(help.textContent, /Name a line with Name: value/);
+  key(t, input, 'Escape');
+  assert.equal(t.doc.querySelector('.vz-slot-help'), null, 'gone with the field');
+  slots.dispose();
+});
+
+test('with blockr.ui, a menu word shows its help at the foot of the menu', { skip: !hasUi() }, async () => {
+  const t = setup({ ui: true });
+  const slots = t.V.titleWords.slots({ gear: t.gear, scope: t.scope });
+  const head = t.doc.body.appendChild(t.doc.createElement('div'));
+  slots.paint(head, { parts: [{ text: 'facet', arg: 'percent_of' }] });
+  head.querySelector('.blockr-slot').click();
+  const help = t.doc.querySelector('.blockr-select__dropdown--menu > .vz-slot-help');
+  assert.ok(help, 'the help sits in the menu panel');
+  assert.match(help.textContent, /What 100% is/);
+  slots.close();
+  await tick(t.win);
+  assert.equal(t.doc.querySelector('.vz-slot-help'), null, 'gone with the menu');
+  slots.dispose();
+});
+
 // A template written in R code can hold a real line break ("By: {@x}\n[...]"). A one-line
 // field drops it, so the row loaded marked edited, "not applied" showing on a board just
 // restored. The field shows it as the `\n` R reads as a break.

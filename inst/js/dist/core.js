@@ -1,4 +1,4 @@
-// blockr.viz bundle 18c861db3688403703680e587045df90, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle df7447d29311041989cbbd05206bc8d1, built by tools/bundle.js. Do not edit.
 // sources: core/namespace.js core/util.js core/lazy.js core/tooltip.js core/scope.js core/busy.js core/binding.js core/download.js core/capture.js core/titles.js core/title-words.js core/ticks.js core/slot-pair.js core/gear/tray-nav.js core/gear/sections.js core/gear/tiles.js core/gear/icons.js core/gear/controls.js core/gear/range.js core/gear/ticks.js core/gear/profile.js core/gear/tray.js core/gear/counts.js core/gear/focus.js core/gear/engine.js core/frame.js core/data-view.js core/script-band.js spec/chart.js spec/table.js
 // --- core/namespace.js
 // @ts-check
@@ -1505,6 +1505,25 @@
     });
   };
 
+  /** The setting's help as a muted line: at the foot of a word's menu
+   * (`panel`), or hung under the field typed over a word.
+   * @param {string | undefined} help
+   * @param {{ panel?: Element | null, under?: HTMLElement, scope?: VizScope }} at
+   *   `scope` takes the floating line away when the field goes. */
+  function helpLine(help, at) {
+    if (!help) return;
+    const line = document.createElement('div');
+    line.className = 'vz-slot-help';
+    line.textContent = help;
+    if (at.panel) { at.panel.appendChild(line); return; }
+    if (!at.under || !at.scope) return;
+    line.classList.add('vz-slot-help--floating');
+    document.body.appendChild(line);
+    const place = ui().place;
+    const placed = place ? place(line, at.under, { width: { min: 180, max: 320 } }) : null;
+    at.scope.own({ dispose: () => { if (placed) placed.stop(); line.remove(); } });
+  }
+
   /** Type a value over its word: Enter or leaving commits, Escape puts the
    * word back. A number is held in its range and steps on the arrow keys
    * (by ten with Shift); an emptied number keeps its value, unless it can be
@@ -1555,6 +1574,7 @@
     });
     es.on(input, 'blur', () => finish(true));
     anchor.replaceWith(input);
+    helpLine(how.help, { under: input, scope: es });
     input.focus();
     input.select();
   }
@@ -1572,7 +1592,7 @@
     const at = (/** @type {unknown} */ v) => keys[how.options.findIndex((o) => C.same(o.value, v))];
     const back = (/** @type {string} */ k) => how.options[keys.indexOf(k)];
     anchor.classList.add('blockr-slot--open');
-    return Sel.menu(anchor, {
+    const menu = Sel.menu(anchor, {
       options, mode: how.multi ? 'multi' : 'single', title: how.label,
       selected: how.multi ? (/** @type {unknown[]} */ (how.selected || [])).map(at) : at(how.selected),
       labelFirst: by === 'label', searchPlaceholder: 'Filter',
@@ -1586,6 +1606,11 @@
         onClose();
       }
     });
+    // The menu's panel is the last one blockr.ui hung on <body>; it goes with
+    // the menu, and the line with it.
+    const panels = document.querySelectorAll('body > .blockr-select__dropdown--menu');
+    helpLine(how.help, { panel: panels[panels.length - 1] });
+    return menu;
   }
 
   /** The settings a sentence would name if they were set, three at most.
@@ -2635,15 +2660,6 @@
     ranges: 'e.g. Recession: 2008-01-01 to 2009-06-30'
   };
 
-  /** The hover help on a text field, for the syntax the placeholder hides once typed in.
-   * @type {Record<string, string>} */
-  const HELPS = {
-    lines: 'One line per value, separated by ; or a comma. Name a line with Name: value, ' +
-      'e.g. Target: 4; Max: 6',
-    ranges: 'One range per entry, separated by ;. Name a range with Name: from to to, ' +
-      'e.g. Recession: 2008-01-01 to 2009-06-30'
-  };
-
   // -- values as text ---------------------------------------------------------
 
   /** @param {string} t */
@@ -2940,8 +2956,6 @@
     const ph = placeholderOf(ctx) ||
       PLACEHOLDERS[(ctx.arg.gear && ctx.arg.gear.parse) || ''] || '';
     if (ph) inp.placeholder = ph;
-    const help = HELPS[(ctx.arg.gear && ctx.arg.gear.parse) || ''];
-    if (help) inp.setAttribute('data-blockr-tooltip', help);
     const commit = opts.commit || ((/** @type {string} */ t) => {
       const v = fromText(ctx.arg, t);
       if (!same(v, ctx.value)) ctx.set(v);
@@ -3956,6 +3970,16 @@
    * many more payloads may still predate it. */
   /** @typedef {{ value: unknown, before: unknown, left: number }} Pending */
 
+  /** An opener with its setting's help line, when the spec gives one. A setting drawn
+   * as several words (limits, ticks) gives it to each word.
+   * @param {VizSlotOpener | null} how @param {VizArg | undefined} arg */
+  const withHelp = (how, arg) => {
+    const help = arg && arg.gear && arg.gear.help;
+    if (!how || !help) return how;
+    if (how.kind === 'pair') how.ends.forEach((end) => { end.help = help; });
+    if (how.kind === 'words') how.words.forEach((w) => { w.how.help = help; });
+    return Object.assign(how, { help });
+  };
   class Gear {
     /** @param {HTMLElement} el @param {VizGearOptions} opts */
     constructor(el, opts) {
@@ -4330,12 +4354,12 @@
       // `{@value}` is its first summary's column) or names a setting differently.
       const own = this.host.slot && this.host.slot(key, values);
       if (own) {
-        return this._argSlot(key, own.arg, own.value, own.label,
-                             (v) => this.set(own.write(v)), values);
+        return withHelp(this._argSlot(key, own.arg, own.value, own.label,
+                                      (v) => this.set(own.write(v)), values), own.arg);
       }
       if (this.spec[key]) {
-        return this._argSlot(key, this.spec[key], values[key], this.label(key, values),
-                             (v) => this.set({ [key]: v }), values);
+        return withHelp(this._argSlot(key, this.spec[key], values[key], this.label(key, values),
+                                      (v) => this.set({ [key]: v }), values), this.spec[key]);
       }
       return this.scriptSlot(key);
     }
@@ -5551,7 +5575,8 @@
       "gear": {
         "group": "Look",
         "control": "ticks",
-        "label": "X ticks"
+        "label": "X ticks",
+        "help": "Auto picks the ticks. Every sets a step, at lists the ticks, e.g. 0, 25, 50."
       },
       "slot": true,
       "ctrl": true
@@ -5567,7 +5592,8 @@
       "gear": {
         "group": "Look",
         "control": "ticks",
-        "label": "Y ticks"
+        "label": "Y ticks",
+        "help": "Auto picks the ticks. Every sets a step, at lists the ticks, e.g. 0, 25, 50."
       },
       "slot": true,
       "ctrl": true
@@ -5679,7 +5705,8 @@
         "group": "Reference lines",
         "control": "text",
         "label": "Horizontal",
-        "parse": "lines"
+        "parse": "lines",
+        "help": "Separate lines with ;. Name a line with Name: value, e.g. Target: 4; Max: 6."
       },
       "slot": true,
       "ctrl": true
@@ -5697,7 +5724,8 @@
         "group": "Reference lines",
         "control": "text",
         "label": "Vertical",
-        "parse": "lines"
+        "parse": "lines",
+        "help": "Separate lines with ;. Name a line with Name: value, e.g. Target: 4; Max: 6."
       },
       "slot": true,
       "ctrl": true
@@ -6019,7 +6047,8 @@
       "gear": {
         "group": "Numbers",
         "control": "column",
-        "label": "Individual id"
+        "label": "Individual id",
+        "help": "Group counts count each individual once, however many rows they have."
       },
       "slot": true,
       "ctrl": true
@@ -6180,7 +6209,8 @@
         "group": "Numbers",
         "control": "select",
         "label": "Percent of",
-        "labels": ["Facet", "Category", "Color", "Whole chart"]
+        "labels": ["Facet", "Category", "Color", "Whole chart"],
+        "help": "What 100% is: each facet, each category, each color, or the whole chart."
       },
       "slot": true,
       "ctrl": true
@@ -6199,7 +6229,8 @@
         "group": "Look",
         "control": "select",
         "label": "Panel scales",
-        "labels": ["Shared across panels", "Free x and y per panel", "Free y per panel"]
+        "labels": ["Shared across panels", "Free x and y per panel", "Free y per panel"],
+        "help": "Shared keeps panels comparable. Free lets each panel fit its own data."
       },
       "slot": true,
       "ctrl": true

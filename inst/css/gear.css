@@ -546,6 +546,25 @@
   -webkit-appearance: none;
   margin: 0;
 }
+/* A setting's help (gear(help =)) at the foot of what its word opens: under
+   the menu's choices, or in a small card hung under the field typed over the
+   word. */
+.vz-slot-help {
+  padding: 6px 10px 4px;
+  border-top: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  font-size: var(--blockr-font-size-xs, 0.75rem);
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--blockr-color-text-muted, #6b7280);
+}
+.vz-slot-help--floating {
+  z-index: var(--blockr-z-menu, 1070);
+  padding: 6px 10px;
+  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
+  border-radius: var(--blockr-radius-sm, 4px);
+  background: var(--blockr-color-bg-surface, #fff);
+  box-shadow: var(--blockr-shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1));
+}
 
 /* ===== Exposed mapping band =====
    Mapping roles promoted out of the gear onto the block's face (the chart

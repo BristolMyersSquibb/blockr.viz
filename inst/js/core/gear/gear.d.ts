@@ -15,6 +15,8 @@ interface VizGearField {
   icons?: boolean;
   /** What an empty field says (a prepare script's `placeholder`). */
   placeholder?: string;
+  /** One sentence for the user, under what a subtitle word opens (title-words.js). */
+  help?: string;
 }
 
 /** One argument of a generated spec (inst/js/spec/*.js). */
@@ -204,7 +206,12 @@ interface VizWordOf { label: string; script: boolean; shadows: string | null }
 
 /** What a click on a sentence word opens: a block setting, or a prepare script's control.
  * `set` writes the value where it lives (the setting, or `script_values[name]`). */
-interface VizSlotBase { label: string; set(value: unknown): void }
+interface VizSlotBase {
+  label: string;
+  set(value: unknown): void;
+  /** The setting's help (gear(help =)), shown under what the word opens. */
+  help?: string;
+}
 type VizSlotOpener = VizSlotBase & (
   | { kind: 'flag'; value: boolean }
   | { kind: 'entry'; value: unknown; toText(value: unknown): string; fromText(text: string): unknown }
@@ -413,6 +420,9 @@ interface VizUi {
   /** A menu under `anchor` (blockr.ui's Blockr.menu); newer, may be missing. */
   menu?(anchor: HTMLElement, config: { items: VizMenuEntry[]; onClose?: () => void },
         byKeyboard?: boolean): { el: HTMLElement; close(): void };
+  /** Hang a fixed panel under `anchor` and keep it there (blockr.ui's Blockr.place). */
+  place?(panel: HTMLElement, anchor: HTMLElement,
+         opts?: { width?: 'anchor' | { min: number; max: number } }): { stop(): void };
   segmented(options: { value: string; label: string }[], selected: string,
              onChange: (v: string) => void, opts?: { label?: string; size?: 'xs' }):
     { el: HTMLElement; set(v: string): void; get(): string };
