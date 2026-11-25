@@ -58,7 +58,8 @@ merged across the table, interleaved at each section restart, as in
 the HTML renderer. These and any other dot-prefixed columns are not
 exported as data columns.
 \item a \code{.strong} row, or a row above a deeper \code{.indent}, whose data
-cells are all empty is a heading: bold and merged across the table.
+cells are all empty is a heading: merged across the table. It is bold
+only when it is \code{.strong}.
 \item data columns carry their pre-formatted strings. A name with a
 \code{"||"} (\code{"Placebo||CAT1"}) is a two-level spanner: the part before the
 \code{"||"} becomes a merged top header cell; \code{attr(col, "label")}
