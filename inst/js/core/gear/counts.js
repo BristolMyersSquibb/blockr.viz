@@ -21,11 +21,13 @@
     /** @param {any} gear */
     remove(gear) { if (gears.get(gear.id) === gear) gears.delete(gear.id); },
     /** Ask R for the counts of the gear's current columns, once per set of
-     * columns and only while its tray is open.
+     * columns, while its tray is open or while a word in the block's titles
+     * opens a column setting (a word's menu filters by them too).
      * @param {any} gear */
     ask(gear) {
       const need = gear.host.needsCounts;
-      if (gear.disposed || !gear._open || !need || gear._askedFor === gear._cols) return;
+      const wanted = gear._open || (gear.wordsNeedCounts && gear.wordsNeedCounts());
+      if (gear.disposed || !wanted || !need || gear._askedFor === gear._cols) return;
       if (!need(gear._cols)) return;
       gear._askedFor = gear._cols;
       V.util.send(gear.id, 'counts', ++asked);
