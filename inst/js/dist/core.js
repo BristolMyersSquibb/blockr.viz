@@ -1,4 +1,4 @@
-// blockr.viz bundle ebf6851bd3526dd134791a6700434c71, built by tools/bundle.js. Do not edit.
+// blockr.viz bundle cb21206402e9046be75773178d4807bf, built by tools/bundle.js. Do not edit.
 // sources: core/namespace.js core/util.js core/lazy.js core/tooltip.js core/scope.js core/busy.js core/binding.js core/download.js core/capture.js core/titles.js core/title-words.js core/ticks.js core/slot-pair.js core/gear/tray-nav.js core/gear/sections.js core/gear/tiles.js core/gear/icons.js core/gear/controls.js core/gear/range.js core/gear/ticks.js core/gear/profile.js core/gear/tray.js core/gear/counts.js core/gear/focus.js core/gear/engine.js core/frame.js core/data-view.js core/script-band.js spec/chart.js spec/table.js
 // --- core/namespace.js
 // @ts-check
@@ -3842,6 +3842,20 @@
   /** One number for the page: an `<id>_counts` set twice arrives twice. */
   let asked = 0;
 
+  /** Whether a word in the gear's titles, or an offer beside them, opens a column
+   * setting. Its menu filters the columns by their counts as the tray's picker does
+   * (a facet takes columns with few values), so the counts are wanted with the tray
+   * closed too; without them the menu offers only the current pick.
+   * @param {any} gear @returns {boolean} */
+  function wordsNeedCounts(gear) {
+    for (const arg of V.titles.namedArgs(gear._titles)) {
+      const a = gear.spec[V.gear.profile.alias(gear._prof, arg)];
+      const name = a && a.type && a.type.name;
+      if (name === 'column' || name === 'columns') return true;
+    }
+    return false;
+  }
+
   V.gear.columnCounts = {
     /** @param {any} gear */
     add(gear) { gears.set(gear.id, gear); },
@@ -3853,7 +3867,7 @@
      * @param {any} gear */
     ask(gear) {
       const need = gear.host.needsCounts;
-      const wanted = gear._open || (gear.wordsNeedCounts && gear.wordsNeedCounts());
+      const wanted = gear._open || wordsNeedCounts(gear);
       if (gear.disposed || !wanted || !need || gear._askedFor === gear._cols) return;
       if (!need(gear._cols)) return;
       gear._askedFor = gear._cols;
@@ -4479,20 +4493,6 @@
         default:
           return { kind: 'entry', value, set, label, ...text };
       }
-    }
-
-    /** Whether a word in the titles, or an offer beside them, opens a column setting.
-     * Its menu filters the columns by their distinct counts as the tray's picker does
-     * (a facet takes columns with few values), so the counts are wanted with the tray
-     * closed too; without them the menu offers only the current pick.
-     * @returns {boolean} */
-    wordsNeedCounts() {
-      for (const arg of V.titles.namedArgs(this._titles)) {
-        const a = this.spec[P.alias(this._prof, arg)];
-        const name = a && a.type && a.type.name;
-        if (name === 'column' || name === 'columns') return true;
-      }
-      return false;
     }
 
     /** The script controls a word in the titles opens, by variable name: the script band

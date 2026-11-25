@@ -555,20 +555,6 @@
       }
     }
 
-    /** Whether a word in the titles, or an offer beside them, opens a column setting.
-     * Its menu filters the columns by their distinct counts as the tray's picker does
-     * (a facet takes columns with few values), so the counts are wanted with the tray
-     * closed too; without them the menu offers only the current pick.
-     * @returns {boolean} */
-    wordsNeedCounts() {
-      for (const arg of V.titles.namedArgs(this._titles)) {
-        const a = this.spec[P.alias(this._prof, arg)];
-        const name = a && a.type && a.type.name;
-        if (name === 'column' || name === 'columns') return true;
-      }
-      return false;
-    }
-
     /** The script controls a word in the titles opens, by variable name: the script band
      * leaves them out, so one setting has one control on the face.
      * @returns {Set<string>} */
