@@ -15,17 +15,33 @@
   /** One number for the page: an `<id>_counts` set twice arrives twice. */
   let asked = 0;
 
+  /** Whether a word in the gear's titles, or an offer beside them, opens a column
+   * setting. Its menu filters the columns by their counts as the tray's picker does
+   * (a facet takes columns with few values), so the counts are wanted with the tray
+   * closed too; without them the menu offers only the current pick.
+   * @param {any} gear @returns {boolean} */
+  function wordsNeedCounts(gear) {
+    for (const arg of V.titles.namedArgs(gear._titles)) {
+      const a = gear.spec[V.gear.profile.alias(gear._prof, arg)];
+      const name = a && a.type && a.type.name;
+      if (name === 'column' || name === 'columns') return true;
+    }
+    return false;
+  }
+
   V.gear.columnCounts = {
     /** @param {any} gear */
     add(gear) { gears.set(gear.id, gear); },
     /** @param {any} gear */
     remove(gear) { if (gears.get(gear.id) === gear) gears.delete(gear.id); },
     /** Ask R for the counts of the gear's current columns, once per set of
-     * columns and only while its tray is open.
+     * columns, while its tray is open or while a word in the block's titles
+     * opens a column setting (a word's menu filters by them too).
      * @param {any} gear */
     ask(gear) {
       const need = gear.host.needsCounts;
-      if (gear.disposed || !gear._open || !need || gear._askedFor === gear._cols) return;
+      const wanted = gear._open || wordsNeedCounts(gear);
+      if (gear.disposed || !wanted || !need || gear._askedFor === gear._cols) return;
       if (!need(gear._cols)) return;
       gear._askedFor = gear._cols;
       V.util.send(gear.id, 'counts', ++asked);

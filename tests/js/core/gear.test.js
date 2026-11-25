@@ -745,6 +745,42 @@ test('a picker that filters by the counts offers no column until they are in', (
   assert.deepEqual(facetNames(t).filter((x) => x !== '(none)'), ['ARM', 'SEX']);
 });
 
+// A sentence word for a column setting (`split by {label(@facet)}`, or the
+// "+ Facet" offer) opens a menu that filters by the counts too, so they are
+// asked for with the tray closed.
+const wordCols = ['USUBJID', 'ARM', 'SEX', 'AVAL'].map((name) => ({ name, class: 'character', label: '' }));
+const worded = (facet) => payload({ type: 'bar', category: 'ARM', orientation: 'vertical', facet },
+  { columns: wordCols,
+    derived: { titles: { subtitle: { text: 'Counts', parts: [{ text: 'Counts' }], offers: ['facet'] } } } });
+
+test('a word or offer for a column setting asks for the counts with the tray closed', () => {
+  const env = loadGear();
+  const t = Object.assign(env, mountGear(env, { host: countHost }));
+  t.gear.update(worded(null));
+  assert.equal(asks(t).length, 1, 'the counts are asked for at once');
+  t.gear.update(Object.assign(worded(null), { state_rev: 4 }));
+  assert.equal(asks(t).length, 1, 'once per set of columns');
+});
+
+test("a facet word's menu offers every few-valued column after (none) is picked", () => {
+  const env = loadGear();
+  const t = Object.assign(env, mountGear(env, { host: countHost }));
+  t.gear.update(worded(null));
+  env.V.gear.counts({ id: 'blk-chart', counts: { USUBJID: 40, ARM: 3, SEX: 2, AVAL: 200 } });
+  const how = t.gear.slot('facet');
+  const offered = Array.from(how.options, (o) => o.value).filter((v) => v != null);
+  assert.deepEqual(offered, ['ARM', 'SEX'], 'not only the current pick');
+});
+
+test('a sentence without column words still asks for nothing with the tray closed', () => {
+  const env = loadGear();
+  const t = Object.assign(env, mountGear(env, { host: countHost }));
+  t.gear.update(payload({ type: 'bar', category: 'ARM', orientation: 'vertical', facet: 'SEX' },
+    { columns: ['USUBJID', 'ARM', 'SEX', 'AVAL'].map((name) => ({ name, class: 'character', label: '' })),
+      derived: { titles: { subtitle: { text: 'Counts', parts: [{ text: 'Counts' }], offers: [] } } } }));
+  assert.equal(asks(t).length, 0);
+});
+
 test('a payload with the same columns asks again for nothing', () => {
   const env = loadGear();
   const t = Object.assign(env, mountGear(env, { host: countHost }));
