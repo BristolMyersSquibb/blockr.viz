@@ -1,4 +1,4 @@
-/* blockr.viz bundle 80bc3576fe419da566d5feda43655eac, built by tools/bundle.js. Do not edit. */
+/* blockr.viz bundle 3c2b198e3e589a75bb6d6000196c20ce, built by tools/bundle.js. Do not edit. */
 /* sources: frame.css gear.css */
 /* --- frame.css */
 /* The frame every block view draws in (core/frame.js): header, titles,
@@ -21,8 +21,13 @@
   color: var(--blockr-color-text-default, #111827);
   white-space: pre-line;
 }
+/* Subtitle and caption have fixed line heights, 20px and 18px, the same
+   with or without a "+" chip: the chip (gear.css .blockr-slot-offer) is 16px
+   and fits inside either line. blockr.script sets the same values
+   (inst/css/script-block.css); both copies are meant to move to blockr.ui. */
 .vz-subtitle {
   font-size: var(--blockr-font-size-sm, 0.8125rem);
+  line-height: 20px;
   color: var(--blockr-color-text-muted, #6b7280);
   margin-top: 1px;
   white-space: pre-line;
@@ -34,6 +39,7 @@
    text stays a text node: bands are data-derived, never HTML. */
 .vz-caption {
   font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 18px;
   color: var(--blockr-grey-500, #6b7280);
   padding: 6px 2px 0;
   white-space: pre-line;
@@ -331,9 +337,15 @@
   border: 1px dashed var(--blockr-color-border-strong, #d1d5db);
   border-radius: var(--blockr-radius-sm, 4px);
   font-size: var(--blockr-font-size-xs, 0.75rem);
-  line-height: 1.5;
+  /* A fixed 16px box, shorter than the 18px and 20px lines of the caption
+     and subtitle (frame.css), so a chip never makes its line taller. The
+     same box is in blockr.script (inst/css/script-block.css); both are meant
+     to move to blockr.ui, next to .blockr-slot. */
+  box-sizing: border-box;
+  height: 16px;
+  line-height: 14px;
   white-space: nowrap;
-  vertical-align: 1px;
+  vertical-align: -1px;
 }
 .vz-template-offer { color: var(--blockr-color-text-muted, #6b7280); }
 /* A script value that takes the word of a block setting with the same name. */
@@ -739,14 +751,6 @@
   color: var(--blockr-color-text-secondary, #6b7280);
   cursor: pointer;
 }
-/* The dashed box is nearly as tall as a line of the sentence, so on a wrapped
-   line it would sit on the underlined words above it. A subtitle or caption
-   carrying offers gets taller lines throughout, which keeps its spacing even
-   whether a line holds words, offers or both. */
-.vz-subtitle:has(.blockr-slot-offer) { line-height: 2.25; }
-/* The caption's text is a pixel smaller, so it needs more line height for the
-   same gap. */
-.vz-caption:has(.blockr-slot-offer) { line-height: 2.35; }
 .blockr-slot-offer:hover,
 .blockr-slot-offer:focus-visible {
   border-color: var(--blockr-color-primary, #2563eb);

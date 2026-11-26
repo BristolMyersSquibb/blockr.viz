@@ -97,9 +97,15 @@
   border: 1px dashed var(--blockr-color-border-strong, #d1d5db);
   border-radius: var(--blockr-radius-sm, 4px);
   font-size: var(--blockr-font-size-xs, 0.75rem);
-  line-height: 1.5;
+  /* A fixed 16px box, shorter than the 18px and 20px lines of the caption
+     and subtitle (frame.css), so a chip never makes its line taller. The
+     same box is in blockr.script (inst/css/script-block.css); both are meant
+     to move to blockr.ui, next to .blockr-slot. */
+  box-sizing: border-box;
+  height: 16px;
+  line-height: 14px;
   white-space: nowrap;
-  vertical-align: 1px;
+  vertical-align: -1px;
 }
 .vz-template-offer { color: var(--blockr-color-text-muted, #6b7280); }
 /* A script value that takes the word of a block setting with the same name. */
@@ -505,14 +511,6 @@
   color: var(--blockr-color-text-secondary, #6b7280);
   cursor: pointer;
 }
-/* The dashed box is nearly as tall as a line of the sentence, so on a wrapped
-   line it would sit on the underlined words above it. A subtitle or caption
-   carrying offers gets taller lines throughout, which keeps its spacing even
-   whether a line holds words, offers or both. */
-.vz-subtitle:has(.blockr-slot-offer) { line-height: 2.25; }
-/* The caption's text is a pixel smaller, so it needs more line height for the
-   same gap. */
-.vz-caption:has(.blockr-slot-offer) { line-height: 2.35; }
 .blockr-slot-offer:hover,
 .blockr-slot-offer:focus-visible {
   border-color: var(--blockr-color-primary, #2563eb);

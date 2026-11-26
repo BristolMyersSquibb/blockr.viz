@@ -18,8 +18,13 @@
   color: var(--blockr-color-text-default, #111827);
   white-space: pre-line;
 }
+/* Subtitle and caption have fixed line heights, 20px and 18px, the same
+   with or without a "+" chip: the chip (gear.css .blockr-slot-offer) is 16px
+   and fits inside either line. blockr.script sets the same values
+   (inst/css/script-block.css); both copies are meant to move to blockr.ui. */
 .vz-subtitle {
   font-size: var(--blockr-font-size-sm, 0.8125rem);
+  line-height: 20px;
   color: var(--blockr-color-text-muted, #6b7280);
   margin-top: 1px;
   white-space: pre-line;
@@ -31,6 +36,7 @@
    text stays a text node: bands are data-derived, never HTML. */
 .vz-caption {
   font-size: var(--blockr-font-size-xs, 0.75rem);
+  line-height: 18px;
   color: var(--blockr-grey-500, #6b7280);
   padding: 6px 2px 0;
   white-space: pre-line;
