@@ -368,9 +368,9 @@ test_that("a click on a column the script makes filters after the script", {
                                  list(data = quote(d))))
       out <- eval(ex, list(d = d))
       expect_identical(out$USUBJID, "4")
-      # SEX, an upstream column, still filters the source rows.
+      # SEX, which the script keeps, filters after it too.
       expect_match(paste(deparse(ex), collapse = ""),
-                   "mutate(dplyr::filter(d, .data[[\"SEX\"]]", fixed = TRUE)
+                   "mutate(dplyr::filter(d, TRUE)", fixed = TRUE)
     },
     args = list(x = blk, data = list(data = function() d))
   )
@@ -590,4 +590,100 @@ test_that("#| select(multiple = TRUE) makes a one-value factor a multi-select", 
   expect_false(pick("b")$multiple)
   expect_identical(pick("a")$default, "OVR")
   expect_identical(script_control_records(sp)[[1L]]$kind, "multi")
+})
+
+test_that("a click filters after a script that reads its whole input", {
+  # The script builds a choice from all of its input (a row count here, a
+  # pool or a label elsewhere) and checks the frozen control against it.
+  # Filtered first, the script would see the clicked rows only, the check
+  # would fail, and the block would give no rows.
+  d <- data.frame(id = c("a", "a", "b"), val = c(1, 2, 3))
+  blk <- new_chart_block(
+    type = "bar", category = "id", value = "val", func = "max",
+    drill = "id",
+    script = paste(
+      ".label <- paste0(\"Value (n=\", nrow(data), \")\")",
+      "y_axis <- factor(.label, levels = .label)",
+      "data[rep(as.character(y_axis) == .label, nrow(data)), , drop = FALSE]",
+      sep = "\n"
+    )
+  )
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      expr_scope <- session$makeScope("expr")
+      session$flushReact()
+      chart_input_click(expr_scope, id = "a")
+      session$flushReact()
+      ex <- session$returned$expr()
+      out <- chart_output_rows(d, ex)
+      expect_identical(out$id, c("a", "a"))
+      # The filter wraps the script, not its input.
+      expect_identical(ex[[1L]], quote(dplyr::filter))
+    },
+    args = list(x = blk, data = list(data = function() d))
+  )
+})
+
+test_that("dd_drill_post sends columns the script keeps after it", {
+  cols <- list("USUBJID", ".made", "AGE")
+  expect_identical(
+    dd_drill_post(cols, c("USUBJID", "AGE"), c("USUBJID", ".made")),
+    c(TRUE, TRUE, FALSE)
+  )
+})
+
+test_that("a drill = 'auto' click on keys the script relabels keeps its rows", {
+  # The browser sends the mark's keys as the chart draws them, from the
+  # script's output. Checked against the script's input, a relabelled key
+  # matched nothing.
+  d <- data.frame(USUBJID = c("S1", "S1", "S2"), Group = "Arm A",
+                  PARAM = c("ANC", "ANC", "ANC"), AVAL = c(1, 2, 3))
+  script <- paste(
+    "out <- data",
+    "out$Group <- paste0(out$Group, \" (N = \", length(unique(out$USUBJID)) - 1L, \")\")",
+    "out$PARAM <- paste0(out$PARAM, \" (N = \", sum(out$USUBJID == \"S1\"), \")\")",
+    "out",
+    sep = "\n"
+  )
+  rows_of <- function(blk, keys) {
+    out <- NULL
+    shiny::testServer(
+      blockr.core:::get_s3_method("block_server", blk),
+      {
+        expr_scope <- session$makeScope("expr")
+        session$flushReact()
+        do.call(chart_input_click, c(list(expr_scope), keys))
+        session$flushReact()
+        out <- chart_output_rows(d, session$returned$expr())
+        assign("got", out, envir = box)
+      },
+      args = list(x = blk, data = list(data = function() d))
+    )
+  }
+  box <- new.env()
+  auto <- list(USUBJID = "S1", Group = "Arm A (N = 1)")
+  for (role in c("facet", "color")) {
+    blk <- if (role == "facet") {
+      new_chart_block(type = "bar", category = "USUBJID", value = "AVAL",
+                      func = "max", color = "Group", facet = "PARAM",
+                      drill = "auto", script = script)
+    } else {
+      new_chart_block(type = "bar", category = "USUBJID", value = "AVAL",
+                      func = "max", color = "PARAM", drill = "auto",
+                      script = script)
+    }
+    keys <- if (role == "facet") {
+      c(auto, list(PARAM = "ANC (N = 2)"))
+    } else {
+      list(USUBJID = "S1", PARAM = "ANC (N = 2)")
+    }
+    rows_of(blk, keys)
+    expect_identical(box$got$USUBJID, c("S1", "S1"), info = role)
+  }
+  explicit <- new_chart_block(type = "bar", category = "USUBJID",
+                              value = "AVAL", func = "max", color = "Group",
+                              drill = "USUBJID", script = script)
+  rows_of(explicit, list(USUBJID = "S1"))
+  expect_identical(box$got$USUBJID, c("S1", "S1"))
 })

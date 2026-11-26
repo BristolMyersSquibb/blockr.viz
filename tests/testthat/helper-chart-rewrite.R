@@ -409,7 +409,8 @@ record_rw_empty_click_clear <- function(rec, sc) {
 record_rw_open <- c(
   heal_missing_column = "row 1: clearing a column the data lacks clears it",
   download_bar = "a chart's Excel item became the Data section's tables",
-  download_scatter = "a chart's Excel item became the Data section's tables"
+  download_scatter = "a chart's Excel item became the Data section's tables",
+  script_drill = "a click on a column the script keeps filters after the script"
 )
 
 # Messages that changed with an open behaviour change (behaviour-changes.md),

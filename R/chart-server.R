@@ -111,8 +111,10 @@ chart_split_cols <- function(v) {
                     x = v$x, y = v$y)
 }
 
-# The emitted filter. A click selects source rows; with a prepare script the
-# filter goes inside it, except a condition on a column only the script makes.
+# The emitted filter. A click selects rows; with a prepare script the filter
+# goes after it when the script's output has the clicked columns, so the
+# script runs on the rows the chart draws from. Only a condition on a column
+# the script drops goes inside it, on the source rows (dd_drill_post()).
 # With a drill target the chart filters nothing: a selection a saved board
 # still holds (a brush latched before 0.3.0.9027) is ignored. The same object
 # comes back while the code is unchanged, so blockr.core skips a
@@ -138,10 +140,13 @@ chart_expr <- function(data, state, src, held = NULL) {
     v["selection"] <- list(held())
     parts <- chart_filter_parts(v, src, members)
     sx <- src$prep$compiled()
-    names_in <- if (!is.null(sx) && length(parts$conds)) {
-      tryCatch(names(src$raw()), error = function(e) NULL)
+    names_in <- names_out <- NULL
+    if (!is.null(sx) && length(parts$conds)) {
+      names_in <- tryCatch(names(src$raw()), error = function(e) NULL)
+      names_out <- tryCatch(names(src$prep$prepared()),
+                            error = function(e) NULL)
     }
-    post <- dd_drill_post(parts$cols, names_in)
+    post <- dd_drill_post(parts$cols, names_in, names_out)
     ex <- chart_filter_call(parts$conds[!post])
     if (!is.null(d) && !is.data.frame(d)) ex <- wrap_plain_df_input(ex)
     out <- if (is.null(sx)) ex else dd_splice_slot(sx, ex)

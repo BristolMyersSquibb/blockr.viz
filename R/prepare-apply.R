@@ -101,18 +101,25 @@ dd_prepare_run <- function(data, parsed, specs, values = list(),
 #'
 #' A click filter wraps into the script's `.(data)` slot, so it filters the
 #' source rows. A condition on a column only the script makes cannot run there
-#' and goes after the script.
+#' and goes after the script. With `out_cols`, so does a condition on columns
+#' the script's output still has: the script then runs on the same rows as
+#' the chart it draws, and the filter picks the clicked mark's rows from its
+#' output. A script that reads its whole input (a choice list, a pool, a
+#' default built from `data`) would otherwise see only the clicked rows.
 #'
 #' @param cols A list, per condition the column names it reads.
 #' @param src_cols The upstream's column names; NULL (not seen yet) keeps
 #'   every condition before the script.
+#' @param out_cols The script output's column names, or NULL.
 #' @return A logical vector, TRUE for a condition to filter after the script.
 #' @noRd
-dd_drill_post <- function(cols, src_cols = NULL) {
+dd_drill_post <- function(cols, src_cols = NULL, out_cols = NULL) {
   if (is.null(src_cols)) {
     return(rep(FALSE, length(cols)))
   }
-  vapply(cols, function(cc) !all(cc %in% src_cols), logical(1L))
+  vapply(cols, function(cc) {
+    !all(cc %in% src_cols) || (length(out_cols) > 0L && all(cc %in% out_cols))
+  }, logical(1L))
 }
 
 
@@ -123,10 +130,9 @@ dd_drill_post <- function(cols, src_cols = NULL) {
 #' Nesting one into another replaces the outer piece's marker with the inner
 #' piece, which carries the one remaining marker.
 #'
-#' The chart puts the click filter inside the script, so it filters the
-#' source rows: a click names a mark by a column the upstream data has,
-#' which the script may not keep. A click on a column the script makes is
-#' filtered after the script (dd_drill_post()). The table puts the script
+#' The chart puts the click filter after the script when the script's output
+#' has the clicked columns, and inside it, on the source rows, only for a
+#' column the script drops (dd_drill_post()). The table puts the script
 #' inside its filter, and the variables layout its build call.
 #'
 #' @param e The outer expression.
