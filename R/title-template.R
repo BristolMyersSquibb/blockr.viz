@@ -154,10 +154,25 @@ title_template_parts <- function(template, data, args = list()) {
       merged <- c(merged, list(p))
     }
   }
+  merged <- tt_trim_breaks(merged)
   # An argument also named in a clause that stayed is not on offer.
   kept <- tt_piece_args(merged)
   attr(merged, "offers") <- setdiff(unique(offers), kept[!is.na(kept)])
   merged
+}
+
+# A break at the start or end of the sentence has nothing on one side of it:
+# its clause dropped, as in "[a {@x}]\n[b {@y}]" with `y` unset. Left in, it
+# pushes the offers onto a line of their own.
+tt_trim_breaks <- function(parts) {
+  n <- length(parts)
+  if (n && is.null(parts[[n]]$arg)) {
+    parts[[n]]$text <- sub("[[:space:]]*\n[[:space:]]*$", "", parts[[n]]$text)
+  }
+  if (length(parts) && is.null(parts[[1L]]$arg)) {
+    parts[[1L]]$text <- sub("^[[:space:]]*\n[[:space:]]*", "", parts[[1L]]$text)
+  }
+  Filter(function(p) !is.null(p$arg) || nzchar(p$text), parts)
 }
 
 # A choice word prints its menu label, which starts with a capital ("Mean").

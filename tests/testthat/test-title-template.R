@@ -408,3 +408,20 @@ test_that("a line with no text stays while it offers a setting, in both blocks",
   # Nothing to show and nothing to offer: no line.
   expect_null(tt$subtitle)
 })
+
+test_that("a line break next to a dropped clause leaves no stray line", {
+  d <- data.frame(v = 1)
+  txt <- function(p) paste0(vapply(p, function(x) x$text, ""), collapse = "")
+  tpl <- "A[ by {@x}]\\n[B {@y}]"
+
+  second <- title_template_parts(tpl, d, list(x = "g", y = NULL))
+  expect_equal(txt(second), "A by g")
+  expect_equal(attr(second, "offers"), "y")
+
+  first <- title_template_parts("[A {@x}]\\n[B {@y}]", d,
+                                list(x = NULL, y = "h"))
+  expect_equal(txt(first), "B h")
+
+  both <- title_template_parts(tpl, d, list(x = "g", y = "h"))
+  expect_equal(txt(both), "A by g\nB h")
+})
