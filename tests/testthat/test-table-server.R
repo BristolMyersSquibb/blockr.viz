@@ -131,3 +131,36 @@ test_that("a withheld input and its return send nothing", {
     )
   }
 })
+
+test_that("a table click on a column the script relabels keeps its rows", {
+  # The click names the group as the table shows it, after the script. On
+  # the script's input the relabelled value matched nothing.
+  d <- data.frame(USUBJID = c("S1", "S1", "S2"), Group = c("A", "A", "B"),
+                  AVAL = c(1, 2, 3))
+  blk <- new_table_block(
+    layout = "groups", by = "Group", drill = "auto",
+    script = paste(
+      "out <- data",
+      "out$Group <- paste0(out$Group, \" (N = \", length(unique(out$USUBJID)), \")\")",
+      "out", sep = "\n")
+  )
+  box <- new.env()
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      expr <- session$makeScope("expr")
+      session$flushReact()
+      expr$setInputs(table_select = viz_read_selection(list(
+        selection = list(type = "categorical",
+                         filters = list(Group = list("A (N = 2)")),
+                         columns = list()),
+        nonce = 1
+      )))
+      session$flushReact()
+      assign("out", eval(session$returned$expr(), list(data = d)),
+             envir = box)
+    },
+    args = list(x = blk, data = list(data = function() d))
+  )
+  expect_identical(box$out$USUBJID, c("S1", "S1"))
+})

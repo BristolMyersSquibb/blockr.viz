@@ -19,13 +19,16 @@ table_prepare <- function(data, state) {
     sx <- prep$compiled()
     if (is.null(sx)) ex else dd_splice_slot(ex, sx)
   }
-  # A clicked column only the script makes is filtered after it.
+  # A clicked column the script's output has is filtered after the script,
+  # so the script runs on the rows the table shows (dd_drill_post()).
   prep$wrap_drill <- function(filters, members = NULL) {
     sx <- prep$compiled()
-    src <- if (!is.null(sx) && length(filters)) {
-      tryCatch(names(raw()), error = function(e) NULL)
+    src <- out <- NULL
+    if (!is.null(sx) && length(filters)) {
+      src <- tryCatch(names(raw()), error = function(e) NULL)
+      out <- tryCatch(names(prep$prepared()), error = function(e) NULL)
     }
-    table_drill_wrap(sx, filters, members, src)
+    table_drill_wrap(sx, filters, members, src, out)
   }
   prep
 }

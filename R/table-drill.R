@@ -56,15 +56,16 @@ table_drill_expr <- function(filters, members = NULL) {
 }
 
 #' The block's expression: the click filter around the prepare script `sx`.
-#' Columns in `src_cols` (upstream names) are filtered before the script, the
-#' rest (made by the script) after it. NULL `src_cols` filters before.
+#' A column the script's output has (`out_cols`) or only the script makes is
+#' filtered after the script; a column the script drops, before it, on the
+#' upstream rows (`src_cols`). NULL `src_cols` filters before.
 #' @noRd
 table_drill_wrap <- function(sx, filters, members = NULL,
-                                 src_cols = NULL) {
+                                 src_cols = NULL, out_cols = NULL) {
   if (is.null(sx)) {
     return(table_drill_expr(filters, members))
   }
-  post <- dd_drill_post(as.list(names(filters)), src_cols)
+  post <- dd_drill_post(as.list(names(filters)), src_cols, out_cols)
   out <- dd_splice_slot(sx, table_drill_expr(filters[!post], members))
   if (!any(post)) {
     return(out)
