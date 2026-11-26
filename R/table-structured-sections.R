@@ -70,9 +70,21 @@ table_structured_section <- function(data, section_cols, path, i, L,
     g <- table_structured_group_pairs(data, section_cols[seq_len(L)], i)
     if (length(g$columns)) table_structured_claim(g$columns, g$values)
   }
-  out <- list(at = i - 1L, level = L, value = unname(path[i, L]), label = label,
-              keys = keys)
+  out <- list(at = i - 1L, level = L,
+              value = table_structured_section_text(data, sc, path[i, L], i),
+              label = label, keys = keys)
   out[!vapply(out, is.null, logical(1L))]
+}
+
+# A group header's text: its `.group<k>_label` where the frame has one for
+# the row, else the value. The value stays what the header claims.
+table_structured_section_text <- function(data, sc, value, i) {
+  lab_col <- sub("_level$", "_label", sc)
+  if (identical(lab_col, sc) || !lab_col %in% names(data)) {
+    return(unname(value))
+  }
+  lab <- as.character(data[[lab_col]][i])
+  if (is.na(lab) || !nzchar(lab)) unname(value) else lab
 }
 
 # The `.group<k>_level` values of row `i` among `cols`, as parallel

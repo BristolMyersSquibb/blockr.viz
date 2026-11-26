@@ -14,6 +14,40 @@ dv_df <- function() {
 
 stats_of <- function(s) s[!startsWith(names(s), ".")]
 
+test_that("Summary prints a key's display label and claims its value", {
+  d <- data.frame(id = c("S-01", "S-01", "S-02"), short = c("1", "1", "2"),
+                  val = c(1, 3, 5))
+  attr(d$id, "blockr_display") <- "short"
+  v <- list(type = "bar", category = "id", func = "max", value = "val",
+            drill = "id")
+  s <- chart_summary(d, v, chart_display_labels(v, d))
+  expect_identical(as.vector(s$.label), c("1", "2"))
+  expect_identical(s$.variable_level, c("S-01", "S-02"))
+  sel <- chart_claim_to_selection(
+    list(filters = list(.variable_level = list("S-02"))), s, v
+  )
+  expect_identical(sel$filters, list(id = "S-02"))
+  # No map: the stub is the value.
+  expect_identical(as.vector(chart_summary(d, v)$.label), c("S-01", "S-02"))
+})
+
+test_that("a labelled key over a colour prints its label as the header", {
+  d <- data.frame(id = c("S-01", "S-01", "S-02"), short = c("1", "1", "2"),
+                  arm = c("A", "A", "B"), val = c(1, 3, 5))
+  attr(d$id, "blockr_display") <- "short"
+  v <- list(type = "bar", category = "id", color = "arm", func = "max",
+            value = "val", drill = "id")
+  s <- chart_summary(d, v, chart_display_labels(v, d))
+  expect_identical(s$.group1_level, c("S-01", "S-02"))
+  expect_identical(s$.group1_label, c("1", "2"))
+  p <- interactive_table_payload(s, drill = TRUE, drill_target = NULL,
+                                 sortable = TRUE, collapsible = TRUE,
+                                 search = FALSE)
+  secs <- p$data$sections
+  expect_identical(vapply(secs, `[[`, "", "value"), c("1", "2"))
+  expect_identical(as.character(secs[[2L]]$keys$.group1_level), "S-02")
+})
+
 test_that("an aggregated chart's Summary is one row per mark, keys first", {
   d <- dv_df()
   s <- chart_summary(d, list(type = "bar", category = "visit", color = "arm",

@@ -29,9 +29,12 @@
 #'
 #' @param data The rows the chart draws (`src$plain()`).
 #' @param v The chart's values (viz_values()).
+#' @param display The display maps of the key columns
+#'   (chart_display_labels()), or NULL. A row's stub prints its key's display
+#'   text; the claim keeps the value.
 #' @return An annotated data frame, or NULL when the chart draws rows.
 #' @noRd
-chart_summary <- function(data, v) {
+chart_summary <- function(data, v, display = NULL) {
   if (!is.data.frame(data) || !nrow(data)) {
     return(NULL)
   }
@@ -41,7 +44,7 @@ chart_summary <- function(data, v) {
   v$facet <- chart_facets(v, data)
   type <- v$type %||% "bar"
   if (type %in% CHART_DISTRIBUTION_TYPES) {
-    return(chart_summary_dist(data, v))
+    return(chart_summary_dist(data, v, display))
   }
   if (identical(type, "histogram")) {
     return(chart_summary_hist(data, v))
@@ -61,7 +64,7 @@ chart_summary <- function(data, v) {
   for (j in seq_along(stats)) attr(stats[[j]], "label") <- NULL
   names(stats) <- vapply(vals, chart_summary_value_name, character(1L),
                          func = v$func %||% "count", value = value)
-  chart_summary_annotate(d[keys], stats)
+  chart_summary_annotate(d[keys], stats, display)
 }
 
 # Whether chart_summary() gives a table, without building it: the download
@@ -112,7 +115,7 @@ chart_summary_hist <- function(data, v) {
 }
 
 # One row per box or point range: N and the numbers it draws.
-chart_summary_dist <- function(data, v) {
+chart_summary_dist <- function(data, v, display = NULL) {
   # A category NA in every row is unset: one row for the one box.
   cat <- chart_split_in(data, chart_category(v))
   val <- chart_value_col(v)
@@ -146,7 +149,7 @@ chart_summary_dist <- function(data, v) {
   stats <- wide[ids]
   stats$n <- as.integer(stats$n)
   names(stats) <- header[ids]
-  chart_summary_annotate(wide[keys], stats)
+  chart_summary_annotate(wide[keys], stats, display)
 }
 
 CHART_SUMMARY_STAT_WORDS <- list(
@@ -178,19 +181,36 @@ chart_summary_groups <- function(data, keys) {
   lapply(unname(rows), function(i) data[i, , drop = FALSE])
 }
 
+# A key column's values as the axis prints them, from its display map
+# (R/display-labels.R); NULL without a map.
+chart_summary_shown <- function(x, map) {
+  if (!length(map)) {
+    return(NULL)
+  }
+  x <- as.character(x)
+  shown <- unlist(map, use.names = TRUE)[x]
+  ifelse(is.na(shown), x, unname(shown))
+}
+
 # The table view's format: the outer keys as row groups, the innermost as
 # the row, then the statistics. The key columns are annotation columns, so
-# a row click claims them (chart_claim_to_selection()).
-chart_summary_annotate <- function(keys, stats) {
+# a row click claims them (chart_claim_to_selection()). A key whose column
+# has a display map (R/display-labels.R) prints its display text: the stub
+# in `.label`, a group header in `.group<k>_label`. The `_level` columns
+# keep the values, so clicks and filters stay on them.
+chart_summary_annotate <- function(keys, stats, display = NULL) {
   out <- data.frame(row.names = seq_len(nrow(stats)))
   k <- names(keys)
   if (length(k)) {
     last <- k[[length(k)]]
-    out$.label <- as.character(keys[[last]])
+    out$.label <- chart_summary_shown(keys[[last]], display[[last]]) %||%
+      as.character(keys[[last]])
     attr(out$.label, "label") <- last
     for (i in seq_along(k[-length(k)])) {
       out[[paste0(".group", i)]] <- k[[i]]
       out[[paste0(".group", i, "_level")]] <- as.character(keys[[k[[i]]]])
+      shown <- chart_summary_shown(keys[[k[[i]]]], display[[k[[i]]]])
+      if (!is.null(shown)) out[[paste0(".group", i, "_label")]] <- shown
     }
     out$.variable <- last
     out$.variable_level <- as.character(keys[[last]])
@@ -302,7 +322,9 @@ chart_output_rows <- function(data, expr) {
 chart_data_view <- function(kit, src, expr, shown) {
   summary <- shiny::reactive({
     d <- tryCatch(src$plain(), error = function(e) NULL)
-    chart_summary(d, src$values())
+    v <- src$values()
+    raw <- tryCatch(src$raw(), error = function(e) NULL)
+    chart_summary(d, v, chart_display_labels(v, d, raw))
   })
   rows <- shiny::reactive({
     chart_output_rows(tryCatch(kit$data(), error = function(e) NULL),
