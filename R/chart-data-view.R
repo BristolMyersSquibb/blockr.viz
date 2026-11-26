@@ -337,13 +337,27 @@ chart_data_view <- function(kit, src, expr, shown) {
   })
   table <- viz_data_view_table()
 
+  # A row click selects its mark as a click on the mark does: with a drill
+  # target it is the claim the target receives, otherwise the selection.
+  # With a target, the same row clicked again releases the mark. The claim's
+  # nonce counts down from -1, apart from the browser's positive ones, so
+  # the sender sends each row click once.
   select <- paste0(kit$view, "-data_select")
+  rows_clicked <- new.env(parent = emptyenv())
+  rows_clicked$n <- 0
   shiny::observeEvent(kit$input[[select]], {
     msg <- kit$input[[select]]
     v <- shiny::isolate(src$values())
     sel <- chart_claim_to_selection(
       msg$selection, shiny::isolate(summary()), v
     )
+    if (isTRUE(shiny::isolate(kit$transient()))) {
+      held <- shiny::isolate(kit$claim())$selection
+      if (!is.null(sel) && identical(sel$filters, held$filters)) sel <- NULL
+      rows_clicked$n <- rows_clicked$n + 1
+      kit$claim(list(selection = sel, nonce = -rows_clicked$n))
+      return()
+    }
     viz_apply(kit$state, list(selection = sel), kit$revs)
   })
 

@@ -348,6 +348,39 @@ test_that("a row click on Summary selects that mark", {
   })
 })
 
+test_that("with a drill target a Summary row click is the claim it sends", {
+  blk <- new_chart_block(type = "bar", category = "visit", color = "arm",
+                         drill = "auto", drill_target = "target")
+  row_click <- function(expr, session, nonce) {
+    expr$setInputs(`chart-data_select` = viz_read_selection(list(
+      selection = list(type = "categorical", filters = list(
+        .group1_level = list("V3"), .variable = list("arm"),
+        .variable_level = list("A")
+      )),
+      nonce = nonce
+    )))
+    session$flushReact()
+  }
+  sent <- new.env()
+  real <- ctrl_claims
+  local_mocked_bindings(ctrl_claims = function(d, table, filters, ...) {
+    sent$filters <- filters
+    real(d, table, filters, ...)
+  })
+  dv_run(blk, function(session, expr) {
+    dv_open(expr, session)
+    row_click(expr, session, 1)
+    # Not held: the click is the claim, as a click on the mark is.
+    expect_null(session$returned$state$selection())
+    expect_identical(dv_derived(expr)$rows, 10L)
+    expect_identical(sent$filters, list(visit = "V3", arm = "A"))
+    # The same row again releases it, as a second click on the mark does.
+    row_click(expr, session, 2)
+    expect_identical(dv_derived(expr)$rows, 60L)
+    expect_identical(sent$filters, list())
+  })
+})
+
 test_that("a scatter's data view is its rows alone", {
   blk <- new_chart_block(type = "scatter", x = "day", y = "val")
   dv_run(blk, function(session, expr) {
